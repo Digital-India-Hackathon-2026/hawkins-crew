@@ -12,6 +12,7 @@ import os
 import json
 
 from advanced_route_finder import AdvancedRouteFinder
+from mongodb import connect_to_mongodb, disconnect_from_mongodb
 
 
 app = Flask(__name__)
@@ -552,6 +553,10 @@ if __name__ == "__main__":
         print("Error: Failed to load graph")
         exit(1)
 
+    # Connect to MongoDB
+    print("\nConnecting to MongoDB...")
+    connect_to_mongodb()
+
     print("\nServer starting on http://localhost:5000")
     print("Endpoints:")
     print("  POST /route                   - Find multi-train route")
@@ -565,4 +570,7 @@ if __name__ == "__main__":
     print("  GET  /fare                    - Fare lookup")
     print("=" * 60)
 
-    app.run(debug=False, port=5000, threaded=True)
+    try:
+        app.run(debug=False, port=5000, threaded=True)
+    finally:
+        disconnect_from_mongodb()
