@@ -2,9 +2,11 @@
 
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { AlertCircle, Route, ChevronDown, Train } from "lucide-react";
+import { AlertCircle, Route, ChevronDown, Train, Map as MapIcon } from "lucide-react";
 import { SearchCard } from "@/components/search/SearchCard";
 import { JourneyCard } from "@/components/journey/JourneyCard";
+import { RouteMapWrapper } from "@/components/journey/RouteMapWrapper";
+import { useStations } from "@/contexts/StationsContext";
 import { findRoutes, Route as RouteType } from "@/lib/api";
 
 export default function HomePage() {
@@ -12,12 +14,14 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState<number>(0);
   const [lastSearch, setLastSearch] = useState<{
     from: string;
     to: string;
     date: string;
   } | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const { stations } = useStations();
 
   const handleSearch = async (from: string, to: string, date: string) => {
     setIsLoading(true);
@@ -28,6 +32,7 @@ export default function HomePage() {
       const result = await findRoutes(from, to, date);
       console.log("🚂 Route search result:", JSON.stringify(result, null, 2));
       setRoutes(result.routes || []);
+      setSelectedRouteIndex(0); // Select first route by default
       setLastSearch({ from, to, date });
       setSearched(true);
 
@@ -69,6 +74,7 @@ export default function HomePage() {
     } catch (err: any) {
       if (err?.response?.status === 404) {
         setRoutes([]);
+        setSelectedRouteIndex(0);
         setLastSearch({ from, to, date });
         setSearched(true);
         setTimeout(() => {
@@ -83,6 +89,10 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRouteSelect = (index: number) => {
+    setSelectedRouteIndex(index);
   };
 
   return (
@@ -360,18 +370,82 @@ export default function HomePage() {
                   </p>
                 </motion.div>
               ) : (
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
-                >
-                  {routes.map((route) => (
-                    <JourneyCard
-                      key={route.rank}
-                      route={route}
-                      fromStation={lastSearch?.from || ""}
-                      toStation={lastSearch?.to || ""}
+                <>
+                  {/* Route Map */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    style={{ marginBottom: "2rem" }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+                      <MapIcon size={18} color="var(--accent)" />
+                      <h3
+                        style={{
+                          fontFamily: "'Inter', sans-serif",
+                          fontSize: "1.1rem",
+                          fontWeight: 700,
+                          color: "#111111",
+                          letterSpacing: "-0.01em",
+                        }}
+                      >
+                        Route Visualization
+                      </h3>
+                      <span
+                        style={{
+                          fontSize: "0.8rem",
+                          color: "#6B7280",
+                          fontWeight: 500,
+                        }}
+                      >
+                        Showing route #{selectedRouteIndex + 1}
+                      </span>
+                    </div>
+                    <RouteMapWrapper
+                      route={routes[selectedRouteIndex]}
+                      stations={stations}
                     />
-                  ))}
-                </div>
+                  </motion.div>
+
+                  {/* Route Cards */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+                    <Train size={18} color="var(--accent)" />
+                    <h3
+                      style={{
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: "1.1rem",
+                        fontWeight: 700,
+                        color: "#111111",
+                        letterSpacing: "-0.01em",
+                      }}
+                    >
+                      Available Routes
+                    </h3>
+                  </div>
+                  <div
+                    style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
+                  >
+                    {routes.map((route, index) => (
+                      <div
+                        key={route.rank}
+                        onClick={() => handleRouteSelect(index)}
+                        style={{
+                          cursor: "pointer",
+                          outline: selectedRouteIndex === index ? "3px solid var(--accent)" : "none",
+                          outlineOffset: "-3px",
+                          borderRadius: "16px",
+                          transition: "outline 0.2s ease",
+                        }}
+                      >
+                        <JourneyCard
+                          route={route}
+                          fromStation={lastSearch?.from || ""}
+                          toStation={lastSearch?.to || ""}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </section>
