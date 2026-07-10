@@ -9,4 +9,6 @@ dependencies = [
     "flask-cors>=6.0.5",
     "networkx>=3.6.1",
     "requests>=2.34.2",
+    "pymongo>=4.17.0",
+    "python-dotenv>=1.2.2",
 ]
