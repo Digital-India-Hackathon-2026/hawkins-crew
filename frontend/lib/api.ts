@@ -169,6 +169,177 @@ export async function getFare(params: {
   return res.data;
 }
 
+// ─── PNR Status ──────────────────────────────────────────────────────────────
+
+export interface PNRPassenger {
+  number: string;
+  booking_status: string;
+  current_status: string;
+}
+
+export interface PNRData {
+  pnr: string;
+  train_number: string;
+  train_name: string;
+  journey_class: string;
+  chart_prepared: string;
+  source: string;
+  destination: string;
+  journey_date: string;
+  boarding_date: string;
+  departure_time: string;
+  arrival_time: string;
+  booking_status: string;
+  current_status: string;
+  last_updated: string;
+  passengers: PNRPassenger[];
+}
+
+export interface PNRResponse {
+  success: boolean;
+  data?: PNRData;
+  error?: string;
+}
+
+export async function checkPNRStatus(pnr: string): Promise<PNRResponse> {
+  const res = await api.get<PNRResponse>(`/pnr/${pnr}`);
+  return res.data;
+}
+
+// ─── Live Train Tracking ─────────────────────────────────────────────────────
+
+export interface LiveStation {
+  name: string;
+  code: string;
+  scheduled_arrival: string;
+  actual_arrival: string;
+  scheduled_departure: string;
+  actual_departure: string;
+  delay_arrival_min: number;
+  day: number;
+}
+
+export interface LiveRouteStop {
+  serial: string;
+  station_name: string;
+  station_code: string;
+  distance: string;
+  is_departed: string;
+  day: number;
+  scheduled_arrival: string;
+  actual_arrival: string;
+  scheduled_departure: string;
+  actual_departure: string;
+  delay_arrival_min: number;
+  delay_departure_min: number;
+  is_source: boolean;
+  is_destination: boolean;
+}
+
+export interface LiveTrackingData {
+  train_number: string;
+  start_date: string;
+  current_station: LiveStation;
+  current_station_index: number;
+  overall_delay_min: number;
+  route: LiveRouteStop[];
+}
+
+export interface LiveTrackingResponse {
+  success: boolean;
+  data?: LiveTrackingData;
+  error?: string;
+}
+
+export async function trackTrain(
+  trainNumber: string,
+  date?: string
+): Promise<LiveTrackingResponse> {
+  const params: Record<string, string> = {};
+  if (date) params.date = date;
+  const res = await api.get<LiveTrackingResponse>(`/trains/${trainNumber}/live`, { params });
+  return res.data;
+}
+
+// ─── Seat Availability ───────────────────────────────────────────────────────
+
+export interface AvailEntry {
+  date: string;
+  availability: string;
+  confirm_pct: string;
+}
+
+export interface AvailabilityData {
+  train_number: string;
+  from_station: string;
+  to_station: string;
+  class_code: string;
+  quota: string;
+  availability: AvailEntry[];
+}
+
+export interface AvailabilityResponse {
+  success: boolean;
+  data?: AvailabilityData;
+  error?: string;
+}
+
+export async function getAvailability(params: {
+  train: string;
+  from: string;
+  to: string;
+  date: string;
+  class: string;
+  quota?: string;
+}): Promise<AvailabilityResponse> {
+  const res = await api.get<AvailabilityResponse>("/availability", { params });
+  return res.data;
+}
+
+// ─── Train History ───────────────────────────────────────────────────────────
+
+export interface HistoryStation {
+  station_code: string;
+  station_name: string;
+  station_name_full: string;
+  state?: string;
+  scheduled_arrival: string;
+  scheduled_departure: string;
+  day: number;
+  delay_min: number;
+  is_source: boolean;
+  is_destination: boolean;
+}
+
+export interface TrainHistoryData {
+  train_number: string;
+  train_name: string;
+  train_type: string;
+  journey_date: string;
+  total_stops: number;
+  total_delay_min: number;
+  average_delay_min: number;
+  max_delay_min: number;
+  max_delay_station: string;
+  stations: HistoryStation[];
+}
+
+export interface TrainHistoryResponse {
+  success: boolean;
+  data?: TrainHistoryData;
+  error?: string;
+}
+
+export async function trainHistory(
+  trainNumber: string,
+  date?: string
+): Promise<TrainHistoryResponse> {
+  const params: Record<string, string> = {};
+  if (date) params.date = date;
+  const res = await api.get<TrainHistoryResponse>(`/trains/${trainNumber}/history`, { params });
+  return res.data;
+}
+
 // Utility: format duration from seconds
 export function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
