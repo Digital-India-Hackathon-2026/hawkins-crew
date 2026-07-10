@@ -135,18 +135,20 @@ export function StationAutocomplete({
   }, [activeIndex]);
 
   return (
-    <div ref={containerRef} style={{ position: "relative", width: "100%" }}>
+    <div ref={containerRef} style={{ position: "relative", width: "100%", zIndex: 200 }}>
       {label && (
         <label
           htmlFor={id}
           style={{
             display: "block",
-            fontSize: "0.78rem",
+            fontSize: "0.8rem",
             fontWeight: 600,
-            color: "var(--text-muted)",
+            color: "#111111",
             textTransform: "uppercase",
-            letterSpacing: "0.06em",
-            marginBottom: "6px",
+            letterSpacing: "0.08em",
+            marginBottom: "8px",
+            position: "relative",
+            zIndex: 200,
           }}
         >
           {label}
@@ -158,10 +160,10 @@ export function StationAutocomplete({
           size={16}
           style={{
             position: "absolute",
-            left: "12px",
+            left: "14px",
             top: "50%",
             transform: "translateY(-50%)",
-            color: value ? "hsl(25,90%,60%)" : "var(--text-muted)",
+            color: value ? "#111111" : "#9CA3AF",
             pointerEvents: "none",
           }}
         />
@@ -182,29 +184,29 @@ export function StationAutocomplete({
           }
           style={{
             width: "100%",
-            padding: "0.85rem 2.5rem 0.85rem 2.5rem",
-            background: "rgba(255,255,255,0.05)",
-            border: `1.5px solid ${isOpen ? "hsl(25,90%,55%)" : "rgba(255,255,255,0.1)"}`,
+            padding: "0.7rem 2.75rem 0.7rem 2.75rem",
+            background: "#F9FAFB",
+            border: `1.5px solid ${isOpen ? "#111111" : "#D1D5DB"}`,
             borderRadius: "12px",
-            color: "var(--text-primary)",
+            color: "#111111",
             fontSize: "0.95rem",
             fontFamily: "'Inter', sans-serif",
             outline: "none",
-            transition: "border-color 0.2s, box-shadow 0.2s",
-            boxShadow: isOpen ? "0 0 0 3px rgba(220,100,30,0.15)" : "none",
+            transition: "all 0.2s ease",
+            boxShadow: isOpen ? "0 0 0 1px #111111" : "none",
             cursor: disabled ? "not-allowed" : "text",
           }}
         />
         <div
           style={{
             position: "absolute",
-            right: "12px",
+            right: "14px",
             top: "50%",
             transform: "translateY(-50%)",
           }}
         >
           {stationsLoading ? (
-            <Loader2 size={16} style={{ color: "var(--text-muted)" }} className="animate-spin" />
+            <Loader2 size={16} style={{ color: "#9CA3AF" }} className="animate-spin" />
           ) : value ? (
             <button
               onClick={handleClear}
@@ -213,16 +215,17 @@ export function StationAutocomplete({
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                color: "var(--text-muted)",
+                color: "#6B7280",
                 padding: "2px",
                 display: "flex",
                 alignItems: "center",
+                transition: "color 0.2s ease",
               }}
             >
               <X size={16} />
             </button>
           ) : (
-            <Search size={16} style={{ color: "var(--text-muted)" }} />
+            <Search size={16} style={{ color: "#9CA3AF" }} />
           )}
         </div>
       </div>
@@ -237,15 +240,15 @@ export function StationAutocomplete({
             transition={{ duration: 0.15 }}
             style={{
               position: "absolute",
-              top: "calc(100% + 6px)",
+              top: "calc(100% + 8px)",
               left: 0,
               right: 0,
-              zIndex: 200,
-              background: "hsl(222, 22%, 11%)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              zIndex: 2000,
+              background: "#FFFFFF",
+              border: "1px solid #ECECEC",
               borderRadius: "12px",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-              maxHeight: "280px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              maxHeight: "300px",
               overflow: "hidden",
             }}
           >
@@ -255,9 +258,9 @@ export function StationAutocomplete({
               role="listbox"
               style={{
                 listStyle: "none",
-                padding: "6px",
+                padding: "8px",
                 margin: 0,
-                maxHeight: "268px",
+                maxHeight: "284px",
                 overflowY: "auto",
               }}
             >
@@ -272,37 +275,38 @@ export function StationAutocomplete({
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "10px",
-                    padding: "10px 12px",
+                    gap: "12px",
+                    padding: "12px 14px",
                     borderRadius: "8px",
                     cursor: "pointer",
                     background:
                       activeIndex === i
-                        ? "rgba(220,100,30,0.12)"
+                        ? "#F9F9F9"
                         : "transparent",
-                    transition: "background 0.1s",
+                    transition: "background 0.15s ease",
                   }}
                 >
                   <div
                     style={{
-                      width: "34px",
-                      height: "34px",
+                      width: "38px",
+                      height: "38px",
                       borderRadius: "8px",
                       background:
                         activeIndex === i
-                          ? "rgba(220,100,30,0.2)"
-                          : "rgba(255,255,255,0.06)",
+                          ? "#111111"
+                          : "#F3F4F6",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       flexShrink: 0,
-                      fontSize: "0.65rem",
+                      fontSize: "0.68rem",
                       fontWeight: 700,
                       fontFamily: "'JetBrains Mono', monospace",
                       color:
                         activeIndex === i
-                          ? "hsl(25,90%,62%)"
-                          : "var(--text-secondary)",
+                          ? "#FFFFFF"
+                          : "#6B7280",
+                      transition: "all 0.15s ease",
                     }}
                   >
                     {station.code}
@@ -310,9 +314,9 @@ export function StationAutocomplete({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
-                        fontSize: "0.9rem",
+                        fontSize: "0.95rem",
                         fontWeight: 500,
-                        color: "var(--text-primary)",
+                        color: "#111111",
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -323,8 +327,9 @@ export function StationAutocomplete({
                     {station.state && (
                       <div
                         style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
+                          fontSize: "0.8rem",
+                          color: "#9CA3AF",
+                          marginTop: "2px",
                         }}
                       >
                         {station.state}

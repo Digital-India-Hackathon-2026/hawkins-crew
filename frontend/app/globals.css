@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 :root {
-  /* Primary: Deep Navy */
+  /* Primary: Keep existing accent for brand */
   --primary: hsl(220, 70%, 20%);
   --primary-light: hsl(220, 60%, 35%);
   --primary-dark: hsl(220, 80%, 12%);
@@ -12,23 +12,23 @@
   --accent-light: hsl(35, 95%, 62%);
   --accent-dark: hsl(20, 85%, 45%);
 
-  /* Background */
-  --bg-primary: hsl(222, 28%, 7%);
-  --bg-secondary: hsl(222, 22%, 11%);
-  --bg-card: hsl(222, 20%, 14%);
-  --bg-card-hover: hsl(222, 20%, 17%);
-  --bg-input: hsl(222, 18%, 10%);
+  /* Background - Bright white */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #FAFAFA;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F9F9F9;
+  --bg-input: #FFFFFF;
 
-  /* Glass */
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-bg-strong: rgba(255, 255, 255, 0.08);
+  /* Glass - Minimal borders */
+  --glass-bg: rgba(0, 0, 0, 0.02);
+  --glass-border: #ECECEC;
+  --glass-bg-strong: rgba(0, 0, 0, 0.03);
 
-  /* Text */
-  --text-primary: hsl(210, 20%, 95%);
-  --text-secondary: hsl(210, 15%, 70%);
-  --text-muted: hsl(210, 10%, 50%);
-  --text-accent: hsl(25, 90%, 60%);
+  /* Text - High contrast black */
+  --text-primary: #111111;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+  --text-accent: hsl(25, 90%, 55%);
 
   /* Status */
   --success: hsl(145, 60%, 42%);
@@ -39,23 +39,23 @@
   /* Railway line */
   --rail-line: hsl(25, 80%, 55%);
 
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
-  --shadow-accent: 0 4px 20px rgba(220, 100, 30, 0.2);
-  --shadow-glow: 0 0 30px rgba(220, 100, 30, 0.15);
+  /* Shadows - Minimal */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-accent: 0 2px 8px rgba(220, 100, 30, 0.12);
+  --shadow-glow: 0 0 20px rgba(220, 100, 30, 0.08);
 
-  /* Border radius */
+  /* Border radius - Rounded */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
 
-  /* Transitions */
-  --transition-fast: 150ms ease;
+  /* Transitions - Smooth */
+  --transition-fast: 200ms ease;
   --transition-base: 250ms ease;
-  --transition-slow: 400ms ease;
+  --transition-slow: 300ms ease;
 }
 
 * {
@@ -75,43 +75,42 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-weight: 400;
+  line-height: 1.6;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Sora', sans-serif;
-  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: var(--bg-secondary);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--glass-border);
-  border-radius: 3px;
+  background: #D1D5DB;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: #9CA3AF;
 }
 
 /* Glass card */
 .glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--bg-card);
   border: 1px solid var(--glass-border);
 }
 
 .glass-strong {
-  background: var(--glass-bg-strong);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
 }
 
 /* Card */
@@ -119,13 +118,14 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--bg-card);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  transition: box-shadow var(--transition-base), border-color var(--transition-base), transform var(--transition-base);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
 }
 
 .card:hover {
-  box-shadow: var(--shadow-lg);
-  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-md);
+  border-color: #E5E7EB;
+  transform: translateY(-1px);
 }
 
 /* Input */
@@ -136,9 +136,9 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-primary);
   font-family: 'Inter', sans-serif;
   font-size: 0.95rem;
-  padding: 0.75rem 1rem;
+  padding: 0.875rem 1rem;
   width: 100%;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: all var(--transition-fast);
   outline: none;
 }
 
@@ -147,8 +147,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .input-base:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(220, 100, 30, 0.15);
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 1px var(--text-primary);
 }
 
 /* Gradient text */
@@ -220,7 +220,7 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 100px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -228,33 +228,33 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .badge-accent {
-  background: rgba(220, 100, 30, 0.15);
-  color: var(--accent-light);
-  border: 1px solid rgba(220, 100, 30, 0.25);
+  background: #FFF4ED;
+  color: var(--accent);
+  border: 1px solid #FED7AA;
 }
 
 .badge-success {
-  background: rgba(50, 180, 100, 0.15);
-  color: hsl(145, 65%, 55%);
-  border: 1px solid rgba(50, 180, 100, 0.25);
+  background: #F0FDF4;
+  color: hsl(145, 65%, 45%);
+  border: 1px solid #BBF7D0;
 }
 
 .badge-warning {
-  background: rgba(255, 170, 50, 0.15);
-  color: hsl(40, 95%, 65%);
-  border: 1px solid rgba(255, 170, 50, 0.25);
+  background: #FFFBEB;
+  color: hsl(40, 95%, 45%);
+  border: 1px solid #FDE68A;
 }
 
 .badge-error {
-  background: rgba(220, 50, 50, 0.15);
-  color: hsl(0, 80%, 65%);
-  border: 1px solid rgba(220, 50, 50, 0.25);
+  background: #FEF2F2;
+  color: hsl(0, 80%, 45%);
+  border: 1px solid #FECACA;
 }
 
 .badge-blue {
-  background: rgba(60, 130, 220, 0.15);
-  color: hsl(210, 85%, 65%);
-  border: 1px solid rgba(60, 130, 220, 0.25);
+  background: #EFF6FF;
+  color: hsl(210, 85%, 45%);
+  border: 1px solid #BFDBFE;
 }
 
 /* Button */
@@ -263,7 +263,7 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 0.75rem 1.5rem;
+  padding: 0.875rem 1.75rem;
   border-radius: var(--radius-md);
   font-family: 'Inter', sans-serif;
   font-size: 0.95rem;
@@ -272,33 +272,34 @@ h1, h2, h3, h4, h5, h6 {
   border: none;
   transition: all var(--transition-fast);
   text-decoration: none;
+  letter-spacing: -0.01em;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  background: var(--text-primary);
   color: white;
-  box-shadow: var(--shadow-accent);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-glow);
-  filter: brightness(1.1);
+  transform: scale(1.01);
+  box-shadow: var(--shadow-md);
+  opacity: 0.9;
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+  transform: scale(0.99);
 }
 
 .btn-ghost {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
+  background: transparent;
+  border: 1.5px solid var(--glass-border);
   color: var(--text-primary);
 }
 
 .btn-ghost:hover {
-  background: var(--glass-bg-strong);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--bg-secondary);
+  border-color: var(--text-secondary);
 }
 
 /* Divider */
@@ -311,17 +312,18 @@ h1, h2, h3, h4, h5, h6 {
 /* Stat */
 .stat-label {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
 }
 
 .stat-value {
-  font-size: 1.4rem;
-  font-weight: 700;
-  font-family: 'Sora', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: 'Inter', sans-serif;
   color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 
 /* Page header */
