@@ -14,6 +14,7 @@ import requests as http_requests
 
 from advanced_route_finder import AdvancedRouteFinder
 from mongodb import connect_to_mongodb, disconnect_from_mongodb
+from optimization import select_optimal_route, load_optimizer_config
 
 
 app = Flask(__name__)
@@ -25,6 +26,9 @@ CORS(app)
 finder = None
 GRAPH_LOADING = False
 ERROR_MSG = None
+
+# Optimizer config - loaded once on startup
+OPTIMIZER_CONFIG = None
 
 # In-memory data stores (loaded once on startup)
 STATIONS_LIST = []   # [{code, name, state, zone, lat, lng}]
@@ -138,12 +142,18 @@ def load_static_data():
 
 def load_graph():
     """Load graph and initialize route finder in background."""
-    global finder, GRAPH_LOADING, ERROR_MSG
+    global finder, GRAPH_LOADING, ERROR_MSG, OPTIMIZER_CONFIG
 
     try:
         print("Loading graph...")
         finder = AdvancedRouteFinder("graph.pkl")
         print(f"Route finder initialized")
+
+        # Load optimizer config
+        print("Loading optimizer config...")
+        OPTIMIZER_CONFIG = load_optimizer_config("optimizer_config.json")
+        print(f"Optimizer config loaded")
+
         GRAPH_LOADING = False
     except Exception as e:
         GRAPH_LOADING = False
@@ -214,28 +224,49 @@ def get_route():
         # Parse date
         travel_date = datetime.strptime(date_str, "%Y-%m-%d")
 
-        # Find routes
+        # Find routes (generates and ranks candidate routes)
         routes = finder.find_routes(from_station, to_station, travel_date, max_routes=5)
 
         if routes:
+            # Convert Journey objects to dicts for processing
+            candidate_routes = [
+                {
+                    "rank": i + 1,
+                    "segments": route.segments,
+                    "total_duration": route.total_duration,
+                    "total_waiting": route.total_waiting,
+                    "num_transfers": route.num_transfers,
+                    "trains_used": route.trains_used,
+                    "stations_visited": route.stations_visited,
+                    "score": route.score,
+                    "score_breakdown": route.score_breakdown
+                }
+                for i, route in enumerate(routes)
+            ]
+
+            # ─── CP-SAT Optimizer Stage ───
+            # POST-PROCESSING: Select optimal route from candidates using
+            # configurable weighted objectives and hard constraints.
+            # This does NOT re-rank — it makes a final selection decision.
+            #
+            # Future: After n8n delay analysis enrichment adds delayRisk and
+            # reliabilityScore fields to each route, the optimizer will use
+            # those values. Currently uses defaults from config.
+            optimal_route, opt_metadata = select_optimal_route(
+                candidate_routes,
+                OPTIMIZER_CONFIG
+            )
+
+            # Return all candidate routes (for frontend display) plus the
+            # optimizer's selected route and metadata (for logging/debugging)
             return jsonify({
                 "status": "found",
                 "from": from_station,
                 "to": to_station,
                 "date": date_str,
-                "routes": [
-                    {
-                        "rank": i + 1,
-                        "segments": route.segments,
-                        "total_duration": route.total_duration,
-                        "total_waiting": route.total_waiting,
-                        "num_transfers": route.num_transfers,
-                        "trains_used": route.trains_used,
-                        "score": route.score,
-                        "score_breakdown": route.score_breakdown
-                    }
-                    for i, route in enumerate(routes)
-                ]
+                "routes": candidate_routes,
+                "optimal_route": optimal_route,
+                "optimizer_metadata": opt_metadata
             })
         else:
             return jsonify({

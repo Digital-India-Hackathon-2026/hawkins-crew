@@ -1,0 +1,9 @@
+{
+  "waitingPenalty": 0.8,
+  "transferPenalty": 3600,
+  "delayPenalty": 7200,
+  "maxTransfers": 3,
+  "maxWaitingTime": 7200,
+  "missingDelayRiskDefault": 0.5,
+  "missingReliabilityScoreDefault": 0.5
+}
