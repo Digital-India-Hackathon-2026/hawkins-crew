@@ -31,6 +31,37 @@ export default function HomePage() {
       setLastSearch({ from, to, date });
       setSearched(true);
 
+      // Fire and forget log saving
+      fetch('/api/logs/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceStation: { code: from, name: from },
+          destinationStation: { code: to, name: to },
+          dateOfJourney: new Date(date),
+          dayOfWeek: new Date(date).getDay(),
+          searchParameters: { optimizationObjective: 'DEFAULT' },
+          performanceMetrics: { executionTimeMs: 0, candidateRoutesEvaluated: result.routes?.length || 0 },
+          routes: (result.routes || []).map(r => ({
+            rank: r.rank,
+            totalTravelTime: r.score_breakdown?.travel_time || 0,
+            totalWaitingTime: r.total_waiting || 0,
+            numberOfTransfers: r.num_transfers || 0,
+            overallScore: r.score || 0,
+            isRecommended: r.rank === 1,
+            legs: r.segments.filter(s => s.type === 'travel').map(s => {
+              return {
+                trainNumber: (s as any).train_number,
+                fromStation: (s as any).from_station,
+                toStation: (s as any).to_station
+              };
+            })
+          })),
+          status: { isSuccess: true },
+          metadata: { apiVersion: '1.0' }
+        })
+      }).catch(err => console.error('Failed to save search log', err));
+
       // Scroll to results
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
