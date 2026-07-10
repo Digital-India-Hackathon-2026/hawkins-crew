@@ -11,7 +11,7 @@ import { RouteLayer } from "./RouteLayer";
 import { RouteLegend } from "./RouteLegend";
 import { RouteControls } from "./RouteControls";
 import { RouteSummary } from "./RouteSummary";
-import { StationTimeline } from "./StationTimeline";
+import { RouteSelector } from "./RouteSelector";
 import { AlertCircle, Map as MapIcon } from "lucide-react";
 
 interface MultiRouteMapProps {
@@ -68,12 +68,16 @@ export function MultiRouteMap({
     return new Set(sharedStations.map(s => s.code));
   }, [sharedStations]);
 
-  // Calculate bounds for visible routes
+  // Calculate bounds - use selected route if fitting, otherwise all visible routes
   const bounds = useMemo(() => {
-    const visibleRoutesData = normalizedRoutes.filter(r => visibleRoutes.has(r.routeIndex));
-    if (visibleRoutesData.length === 0) return null;
+    // If fitting bounds, use only the selected route
+    const routesToFit = shouldFitBounds
+      ? [normalizedRoutes[selectedRouteIndex]].filter(Boolean)
+      : normalizedRoutes.filter(r => visibleRoutes.has(r.routeIndex));
 
-    const allCoords = visibleRoutesData.flatMap(r => r.stations);
+    if (routesToFit.length === 0) return null;
+
+    const allCoords = routesToFit.flatMap(r => r.stations);
     if (allCoords.length === 0) return null;
 
     const lats = allCoords.map(s => s.latitude);
@@ -83,7 +87,7 @@ export function MultiRouteMap({
       [Math.min(...lats), Math.min(...lngs)],
       [Math.max(...lats), Math.max(...lngs)]
     );
-  }, [normalizedRoutes, visibleRoutes]);
+  }, [normalizedRoutes, visibleRoutes, shouldFitBounds, selectedRouteIndex]);
 
   // Calculate bounds for selected route only
   const selectedRouteBounds = useMemo(() => {
@@ -158,7 +162,18 @@ export function MultiRouteMap({
     if (!visibleRoutes.has(routeIndex)) {
       setVisibleRoutes(prev => new Set([...prev, routeIndex]));
     }
-    setShouldFitBounds(false);
+    // Fit bounds to selected route when clicking from map
+    setShouldFitBounds(true);
+  }, [onRouteSelect, visibleRoutes]);
+
+  const handleRouteSelect = useCallback((routeIndex: number) => {
+    onRouteSelect(routeIndex);
+    // Ensure selected route is visible
+    if (!visibleRoutes.has(routeIndex)) {
+      setVisibleRoutes(prev => new Set([...prev, routeIndex]));
+    }
+    // Fit bounds to show selected route when selecting from selector
+    setShouldFitBounds(true);
   }, [onRouteSelect, visibleRoutes]);
 
   const handleStationClick = useCallback((stationCode: string) => {
@@ -348,14 +363,16 @@ export function MultiRouteMap({
 
         {/* Sidebar */}
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Route Selector */}
+          <RouteSelector
+            routes={routes}
+            selectedRouteIndex={selectedRouteIndex}
+            onSelectRoute={handleRouteSelect}
+          />
+
           {/* Route Summary */}
           {selectedRoute && (
             <RouteSummary route={selectedRoute} isBest={selectedRouteIndex === 0} />
-          )}
-
-          {/* Station Timeline */}
-          {selectedRoute && (
-            <StationTimeline route={selectedRoute} onStationClick={handleStationClick} />
           )}
         </div>
       </div>

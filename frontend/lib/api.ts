@@ -19,8 +19,11 @@ export const api = axios.create({
 export interface TrainSegment {
   type: "travel";
   train_number: string;
+  train_name?: string;
   from_station: string;
+  from_station_name?: string;
   to_station: string;
+  to_station_name?: string;
   departure_time: string;
   arrival_time: string;
   departure_day: number;
@@ -30,6 +33,7 @@ export interface TrainSegment {
 export interface TransferSegment {
   type: "transfer";
   station: string;
+  station_name?: string;
   waiting_time_sec: number;
   waiting_time_min: number;
 }

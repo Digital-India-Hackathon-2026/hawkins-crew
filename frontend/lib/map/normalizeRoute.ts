@@ -84,6 +84,7 @@ export function normalizeRoute(
     const fromCode = segment.from_station;
     const toCode = segment.to_station;
     const trainNumber = segment.train_number;
+    const trainName = segment.train_name;
     const trainColor = trainColors[trainColorIndex % trainColors.length];
 
     const segmentCoordinates: Array<{ lat: number; lng: number }> = [];
@@ -172,6 +173,7 @@ export function normalizeRoute(
     if (segmentCoordinates.length >= 2) {
       normalizedSegments.push({
         trainNumber,
+        trainName,
         fromStationCode: fromCode,
         toStationCode: toCode,
         stationCodes: [fromCode, toCode],
