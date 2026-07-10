@@ -36,8 +36,8 @@ export function JourneyTimeline({ segments, fromStation, toStation }: JourneyTim
                     style={{
                       width: "2px",
                       flex: 1,
-                      minHeight: "60px",
-                      background: "linear-gradient(to bottom, hsl(25,90%,55%), rgba(220,100,30,0.4))",
+                      minHeight: "64px",
+                      background: "#E5E7EB",
                     }}
                   />
                 </div>
@@ -45,23 +45,23 @@ export function JourneyTimeline({ segments, fromStation, toStation }: JourneyTim
                 <div
                   style={{
                     marginLeft: "20px",
-                    marginTop: "6px",
-                    marginBottom: "6px",
-                    padding: "10px 14px",
-                    background: "rgba(220,100,30,0.08)",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(220,100,30,0.15)",
+                    marginTop: "8px",
+                    marginBottom: "8px",
+                    padding: "12px 16px",
+                    background: "#FAFAFA",
+                    borderRadius: "12px",
+                    border: "1px solid #F3F4F6",
                     flex: 1,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                    <Train size={14} color="hsl(25,90%,60%)" />
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                    <Train size={15} color="#111111" />
                     <span
                       style={{
                         fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: "0.8rem",
+                        fontSize: "0.85rem",
                         fontWeight: 600,
-                        color: "hsl(25,90%,62%)",
+                        color: "#111111",
                       }}
                     >
                       Train {seg.train_number}
@@ -72,17 +72,17 @@ export function JourneyTimeline({ segments, fromStation, toStation }: JourneyTim
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      fontSize: "0.82rem",
-                      color: "var(--text-secondary)",
+                      fontSize: "0.85rem",
+                      color: "#6B7280",
                     }}
                   >
                     <span>{seg.from_station}</span>
-                    <ArrowRight size={12} />
+                    <ArrowRight size={13} />
                     <span>{seg.to_station}</span>
-                    <span style={{ color: "var(--text-muted)", marginLeft: "auto" }}>
+                    <span style={{ color: "#9CA3AF", marginLeft: "auto" }}>
                       {formatTime(seg.departure_time)} → {formatTime(seg.arrival_time)}
                       {seg.arrival_day > seg.departure_day && (
-                        <span style={{ color: "hsl(25,90%,55%)", marginLeft: "4px" }}>
+                        <span style={{ color: "#6B7280", marginLeft: "4px" }}>
                           +{seg.arrival_day - seg.departure_day}d
                         </span>
                       )}
@@ -121,32 +121,32 @@ export function JourneyTimeline({ segments, fromStation, toStation }: JourneyTim
                     style={{
                       width: "2px",
                       flex: 1,
-                      minHeight: "50px",
+                      minHeight: "54px",
                       background:
-                        "repeating-linear-gradient(to bottom, hsl(40,95%,55%) 0, hsl(40,95%,55%) 4px, transparent 4px, transparent 8px)",
+                        "repeating-linear-gradient(to bottom, #D1D5DB 0, #D1D5DB 4px, transparent 4px, transparent 8px)",
                     }}
                   />
                 </div>
                 <div
                   style={{
                     marginLeft: "20px",
-                    marginTop: "6px",
-                    marginBottom: "6px",
-                    padding: "8px 14px",
-                    background: "rgba(255,170,50,0.08)",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(255,170,50,0.15)",
+                    marginTop: "8px",
+                    marginBottom: "8px",
+                    padding: "10px 16px",
+                    background: "#FFFBEB",
+                    borderRadius: "12px",
+                    border: "1px solid #FDE68A",
                     flex: 1,
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
                   }}
                 >
-                  <Clock size={13} color="hsl(40,95%,62%)" />
+                  <Clock size={14} color="hsl(40,95%,45%)" />
                   <span
                     style={{
-                      fontSize: "0.82rem",
-                      color: "hsl(40,95%,62%)",
+                      fontSize: "0.85rem",
+                      color: "hsl(40,90%,40%)",
                       fontWeight: 500,
                     }}
                   >
@@ -187,44 +187,38 @@ function TimelineStation({
 }) {
   const dotColor =
     type === "origin"
-      ? "hsl(25,90%,55%)"
+      ? "#111111"
       : type === "destination"
       ? "hsl(145,60%,45%)"
-      : "hsl(40,95%,55%)";
+      : "hsl(40,95%,45%)";
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
       <div
         style={{
           width: "12px",
           height: "12px",
           borderRadius: "50%",
           background: dotColor,
-          border: "2px solid var(--bg-primary)",
-          boxShadow: `0 0 8px ${dotColor}66`,
+          border: "2px solid #FFFFFF",
           flexShrink: 0,
         }}
       />
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
         <span
           style={{
             fontFamily: "'JetBrains Mono', monospace",
             fontWeight: 700,
-            fontSize: "0.85rem",
-            color:
-              type === "destination"
-                ? "hsl(145,60%,55%)"
-                : type === "origin"
-                ? "hsl(25,90%,62%)"
-                : "hsl(40,95%,62%)",
+            fontSize: "0.9rem",
+            color: "#111111",
           }}
         >
           {code}
         </span>
-        <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 500 }}>
+        <span style={{ fontSize: "0.85rem", color: "#6B7280", fontWeight: 500 }}>
           {time}
           {day > 1 && (
-            <span style={{ color: "hsl(25,90%,55%)", marginLeft: "4px", fontSize: "0.75rem" }}>
+            <span style={{ color: "#9CA3AF", marginLeft: "6px", fontSize: "0.78rem" }}>
               Day {day}
             </span>
           )}

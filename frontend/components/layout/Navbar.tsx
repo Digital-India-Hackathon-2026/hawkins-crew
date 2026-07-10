@@ -34,14 +34,14 @@ export function Navbar() {
           top: 0,
           left: 0,
           right: 0,
-          zIndex: 100,
-          transition: "all 0.3s ease",
+          zIndex: 150,
+          transition: "all 0.25s ease",
           background: scrolled
-            ? "rgba(10, 14, 26, 0.92)"
-            : "transparent",
-          backdropFilter: scrolled ? "blur(20px)" : "none",
+            ? "rgba(255, 255, 255, 0.92)"
+            : "rgba(255, 255, 255, 0.8)",
+          backdropFilter: "blur(12px)",
           borderBottom: scrolled
-            ? "1px solid rgba(255,255,255,0.08)"
+            ? "1px solid #ECECEC"
             : "1px solid transparent",
         }}
       >
@@ -57,18 +57,18 @@ export function Navbar() {
             {/* Logo */}
             <Link
               href="/"
-              style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}
+              style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none" }}
             >
               <div
                 style={{
-                  width: "36px",
-                  height: "36px",
+                  width: "38px",
+                  height: "38px",
                   borderRadius: "10px",
-                  background: "linear-gradient(135deg, hsl(25,90%,55%), hsl(20,85%,45%))",
+                  background: "#111111",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 4px 12px rgba(220,100,30,0.3)",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
                 }}
               >
                 <Train size={20} color="white" />
@@ -76,11 +76,11 @@ export function Navbar() {
               <div>
                 <div
                   style={{
-                    fontFamily: "'Sora', sans-serif",
+                    fontFamily: "'Inter', sans-serif",
                     fontWeight: 800,
-                    fontSize: "1.2rem",
-                    color: "white",
-                    letterSpacing: "-0.02em",
+                    fontSize: "1.25rem",
+                    color: "#111111",
+                    letterSpacing: "-0.03em",
                     lineHeight: 1,
                   }}
                 >
@@ -88,14 +88,15 @@ export function Navbar() {
                 </div>
                 <div
                   style={{
-                    fontSize: "0.65rem",
-                    color: "hsl(25,90%,60%)",
+                    fontSize: "0.68rem",
+                    color: "#6B7280",
                     fontWeight: 500,
-                    letterSpacing: "0.08em",
+                    letterSpacing: "0.1em",
                     textTransform: "uppercase",
+                    marginTop: "2px",
                   }}
                 >
-                  Railway Planner
+                  Railway
                 </div>
               </div>
             </Link>
@@ -122,18 +123,18 @@ export function Navbar() {
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      padding: "8px 16px",
+                      padding: "10px 18px",
                       borderRadius: "10px",
                       fontSize: "0.9rem",
-                      fontWeight: 500,
+                      fontWeight: 600,
                       textDecoration: "none",
                       transition: "all 0.2s ease",
-                      color: active ? "hsl(25,90%,62%)" : "rgba(255,255,255,0.75)",
+                      color: active ? "#111111" : "#374151",
                       background: active
-                        ? "rgba(220,100,30,0.12)"
+                        ? "#F3F4F6"
                         : "transparent",
                       border: active
-                        ? "1px solid rgba(220,100,30,0.2)"
+                        ? "1px solid #E5E7EB"
                         : "1px solid transparent",
                     }}
                   >
@@ -150,12 +151,12 @@ export function Navbar() {
               className="mobile-menu-btn"
               aria-label="Toggle menu"
               style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.1)",
+                background: "#FFFFFF",
+                border: "1.5px solid #ECECEC",
                 borderRadius: "10px",
                 padding: "8px",
                 cursor: "pointer",
-                color: "white",
+                color: "#111111",
                 display: "none",
               }}
             >
@@ -178,10 +179,10 @@ export function Navbar() {
               top: "64px",
               left: 0,
               right: 0,
-              zIndex: 99,
-              background: "rgba(10, 14, 26, 0.97)",
-              backdropFilter: "blur(20px)",
-              borderBottom: "1px solid rgba(255,255,255,0.08)",
+              zIndex: 140,
+              background: "rgba(255, 255, 255, 0.97)",
+              backdropFilter: "blur(12px)",
+              borderBottom: "1px solid #ECECEC",
               padding: "1rem 1.5rem",
             }}
           >
@@ -196,17 +197,20 @@ export function Navbar() {
                   padding: "12px 16px",
                   borderRadius: "12px",
                   fontSize: "1rem",
-                  fontWeight: 500,
+                  fontWeight: 600,
                   textDecoration: "none",
                   color:
                     pathname === link.href
-                      ? "hsl(25,90%,62%)"
-                      : "rgba(255,255,255,0.85)",
+                      ? "#111111"
+                      : "#374151",
                   marginBottom: "4px",
                   background:
                     pathname === link.href
-                      ? "rgba(220,100,30,0.1)"
+                      ? "#F3F4F6"
                       : "transparent",
+                  border: pathname === link.href
+                      ? "1px solid #E5E7EB"
+                      : "1px solid transparent",
                 }}
               >
                 {link.href === "/utilities" && <Wrench size={18} />}

@@ -69,17 +69,17 @@ export default function TrainSearchPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", flexWrap: "wrap" }}>
                   <div>
                     <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.78rem", color: "hsl(210,80%,60%)", marginBottom: "4px" }}>#{train.train_number}</div>
-                    <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "white" }}>{train.train_name}</div>
+                    <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--text-primary)" }}>{train.train_name}</div>
                     {train.type && <span className="badge badge-blue" style={{ marginTop: "6px" }}>{train.type}</span>}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "0.9rem", fontFamily: "'JetBrains Mono', monospace" }}>
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontWeight: 700, color: "white" }}>{formatTime(train.departure)}</div>
+                      <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{formatTime(train.departure)}</div>
                       <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Departs</div>
                     </div>
                     <ArrowRight size={14} color="var(--text-muted)" />
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontWeight: 700, color: "white" }}>{formatTime(train.arrival)}</div>
+                      <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{formatTime(train.arrival)}</div>
                       <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Arrives</div>
                     </div>
                   </div>

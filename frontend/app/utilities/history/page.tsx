@@ -375,7 +375,7 @@ export default function TrainHistoryPage() {
                       fontFamily: "'Sora', sans-serif",
                       fontSize: "1rem",
                       fontWeight: 700,
-                      color: "white",
+                      color: "var(--text-primary)",
                     }}
                   >
                     {result.train_name}
@@ -549,7 +549,7 @@ export default function TrainHistoryPage() {
                     fontFamily: "'Sora', sans-serif",
                     fontWeight: 700,
                     fontSize: "0.9rem",
-                    color: "white",
+                    color: "var(--text-primary)",
                   }}
                 >
                   Station Timeline

@@ -400,7 +400,7 @@ export default function LiveTrackingPage() {
                         fontFamily: "'Sora', sans-serif",
                         fontSize: "1rem",
                         fontWeight: 700,
-                        color: "white",
+                        color: "var(--text-primary)",
                       }}
                     >
                       Live Status
@@ -597,7 +597,7 @@ export default function LiveTrackingPage() {
                       fontFamily: "'Sora', sans-serif",
                       fontWeight: 700,
                       fontSize: "0.9rem",
-                      color: "white",
+                      color: "var(--text-primary)",
                     }}
                   >
                     Route Timeline

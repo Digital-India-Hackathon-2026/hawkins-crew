@@ -64,7 +64,7 @@ export default function StationBoardPage() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
             {/* Station info */}
             <div style={{ marginBottom: "1rem", padding: "1rem 1.25rem", background: "rgba(30,165,165,0.06)", border: "1px solid rgba(30,165,165,0.15)", borderRadius: "12px" }}>
-              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: "1.1rem", color: "white" }}>{result.station.name}</div>
+              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: "1.1rem", color: "var(--text-primary)" }}>{result.station.name}</div>
               <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>
                 {result.station.state && `${result.station.state} · `}{result.station.zone && `${result.station.zone} Zone`}
               </div>
@@ -107,7 +107,7 @@ export default function StationBoardPage() {
                       {formatTime(tab === "departures" ? train.departure : train.arrival)}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: "0.88rem", fontWeight: 500, color: "white", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{train.train_name}</div>
+                      <div style={{ fontSize: "0.88rem", fontWeight: 500, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{train.train_name}</div>
                       <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
                         #{train.train_number} · {tab === "departures" ? `→ ${train.to_station}` : `← ${train.from_station}`}
                       </div>

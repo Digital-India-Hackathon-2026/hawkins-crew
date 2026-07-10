@@ -49,71 +49,57 @@ export function SearchCard({ onSearch, isLoading }: SearchCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.4 }}
       style={{
-        background: "rgba(10, 14, 26, 0.85)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        background: "#FFFFFF",
+        border: "1px solid #ECECEC",
         borderRadius: "20px",
-        padding: "2rem",
-        boxShadow: "0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)",
+        padding: "2rem 2.5rem",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
         width: "100%",
-        maxWidth: "640px",
+        maxWidth: "1200px",
         margin: "0 auto",
+        position: "relative",
+        zIndex: 200,
       }}
     >
-      <div style={{ marginBottom: "1.25rem" }}>
-        <h2
-          style={{
-            fontFamily: "'Sora', sans-serif",
-            fontSize: "1rem",
-            fontWeight: 700,
-            color: "white",
-            marginBottom: "4px",
-          }}
-        >
-          Find Your Journey
-        </h2>
-        <p style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
-          Discover optimal multi-train routes across India
-        </p>
-      </div>
-
-      {/* Station inputs */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        <div style={{ position: "relative" }}>
+      {/* All inputs in one line */}
+      <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap", position: "static", zIndex: 200 }}>
+        <div style={{ position: "relative", flex: "1", minWidth: "200px", zIndex: 200 }}>
           <StationAutocomplete
             id="from-station"
-            label="From"
+            label="FROM"
             value={from}
             onChange={setFrom}
-            placeholder="Source station..."
+            placeholder="Source stat..."
           />
         </div>
 
         {/* Swap button */}
-        <div style={{ display: "flex", justifyContent: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", paddingBottom: "2px" }}>
           <button
             onClick={handleSwap}
             aria-label="Swap source and destination"
             style={{
-              background: "rgba(220,100,30,0.15)",
-              border: "1px solid rgba(220,100,30,0.25)",
+              background: "#FFFFFF",
+              border: "1.5px solid #ECECEC",
               borderRadius: "50%",
-              width: "36px",
-              height: "36px",
+              width: "42px",
+              height: "42px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
               transition: "all 0.2s ease",
-              color: "hsl(25,90%,60%)",
+              color: "#111111",
+              flexShrink: 0,
             }}
             onMouseEnter={(e) => {
-              (e.target as HTMLButtonElement).style.background = "rgba(220,100,30,0.25)";
+              (e.target as HTMLButtonElement).style.background = "#F9F9F9";
+              (e.target as HTMLButtonElement).style.borderColor = "#D1D5DB";
               (e.target as HTMLButtonElement).style.transform = "rotate(180deg)";
             }}
             onMouseLeave={(e) => {
-              (e.target as HTMLButtonElement).style.background = "rgba(220,100,30,0.15)";
+              (e.target as HTMLButtonElement).style.background = "#FFFFFF";
+              (e.target as HTMLButtonElement).style.borderColor = "#ECECEC";
               (e.target as HTMLButtonElement).style.transform = "rotate(0deg)";
             }}
           >
@@ -121,39 +107,41 @@ export function SearchCard({ onSearch, isLoading }: SearchCardProps) {
           </button>
         </div>
 
-        <StationAutocomplete
-          id="to-station"
-          label="To"
-          value={to}
-          onChange={setTo}
-          placeholder="Destination station..."
-        />
+        <div style={{ position: "relative", flex: "1", minWidth: "200px", zIndex: 200 }}>
+          <StationAutocomplete
+            id="to-station"
+            label="TO"
+            value={to}
+            onChange={setTo}
+            placeholder="Destination"
+          />
+        </div>
 
         {/* Date input */}
-        <div>
+        <div style={{ flex: "0 0 200px", minWidth: "180px" }}>
           <label
             htmlFor="travel-date"
             style={{
               display: "block",
-              fontSize: "0.78rem",
+              fontSize: "0.8rem",
               fontWeight: 600,
-              color: "var(--text-muted)",
+              color: "#6B7280",
               textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              marginBottom: "6px",
+              letterSpacing: "0.08em",
+              marginBottom: "8px",
             }}
           >
-            Travel Date
+            TRAVEL DATE
           </label>
           <div style={{ position: "relative" }}>
             <Calendar
               size={16}
               style={{
                 position: "absolute",
-                left: "12px",
+                left: "14px",
                 top: "50%",
                 transform: "translateY(-50%)",
-                color: "var(--text-muted)",
+                color: "#9CA3AF",
                 pointerEvents: "none",
               }}
             />
@@ -165,19 +153,62 @@ export function SearchCard({ onSearch, isLoading }: SearchCardProps) {
               min={new Date().toISOString().split("T")[0]}
               style={{
                 width: "100%",
-                padding: "0.85rem 1rem 0.85rem 2.5rem",
-                background: "rgba(255,255,255,0.05)",
-                border: "1.5px solid rgba(255,255,255,0.1)",
+                padding: "0.7rem 1rem 0.7rem 2.75rem",
+                background: "#F9FAFB",
+                border: "1.5px solid #D1D5DB",
                 borderRadius: "12px",
-                color: "var(--text-primary)",
+                color: "#111111",
                 fontSize: "0.95rem",
                 fontFamily: "'Inter', sans-serif",
                 outline: "none",
-                colorScheme: "dark",
+                transition: "all 0.2s ease",
               }}
             />
           </div>
         </div>
+
+        {/* Search button */}
+        <motion.button
+          onClick={handleSearch}
+          disabled={isLoading}
+          whileHover={{ scale: isLoading ? 1 : 1.01 }}
+          whileTap={{ scale: isLoading ? 1 : 0.99 }}
+          style={{
+            flex: "0 0 auto",
+            minWidth: "160px",
+            padding: "0.7rem 1.5rem",
+            background: isLoading
+              ? "#9CA3AF"
+              : "#111111",
+            border: "none",
+            borderRadius: "12px",
+            color: "white",
+            fontSize: "1rem",
+            fontWeight: 600,
+            fontFamily: "'Inter', sans-serif",
+            cursor: isLoading ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
+            transition: "all 0.2s ease",
+            letterSpacing: "-0.01em",
+            height: "fit-content",
+          }}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              Finding Routes
+            </>
+          ) : (
+            <>
+              <Search size={18} />
+              Find Routes
+            </>
+          )}
+        </motion.button>
       </div>
 
       {/* Error */}
@@ -189,61 +220,19 @@ export function SearchCard({ onSearch, isLoading }: SearchCardProps) {
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            marginTop: "1rem",
-            padding: "10px 14px",
-            background: "rgba(220,50,50,0.1)",
-            border: "1px solid rgba(220,50,50,0.2)",
+            marginTop: "1.25rem",
+            padding: "12px 16px",
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
             borderRadius: "10px",
-            fontSize: "0.85rem",
-            color: "hsl(0,80%,65%)",
+            fontSize: "0.88rem",
+            color: "hsl(0,70%,45%)",
           }}
         >
-          <AlertCircle size={14} />
+          <AlertCircle size={15} />
           {error}
         </motion.div>
       )}
-
-      {/* Search button */}
-      <motion.button
-        onClick={handleSearch}
-        disabled={isLoading}
-        whileHover={{ scale: isLoading ? 1 : 1.02 }}
-        whileTap={{ scale: isLoading ? 1 : 0.98 }}
-        style={{
-          marginTop: "1.25rem",
-          width: "100%",
-          padding: "0.95rem",
-          background: isLoading
-            ? "rgba(220,100,30,0.5)"
-            : "linear-gradient(135deg, hsl(25,90%,55%), hsl(20,85%,45%))",
-          border: "none",
-          borderRadius: "12px",
-          color: "white",
-          fontSize: "1rem",
-          fontWeight: 700,
-          fontFamily: "'Sora', sans-serif",
-          cursor: isLoading ? "not-allowed" : "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "10px",
-          boxShadow: "0 4px 20px rgba(220,100,30,0.3)",
-          transition: "box-shadow 0.2s",
-          letterSpacing: "-0.01em",
-        }}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 size={18} className="animate-spin" />
-            Finding Routes...
-          </>
-        ) : (
-          <>
-            <Search size={18} />
-            Find Routes
-          </>
-        )}
-      </motion.button>
     </motion.div>
   );
 }

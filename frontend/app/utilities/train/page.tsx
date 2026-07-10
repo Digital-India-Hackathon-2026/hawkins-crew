@@ -92,7 +92,7 @@ export default function TrainInfoPage() {
                   <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.8rem", color: "hsl(25,90%,60%)", fontWeight: 600, marginBottom: "4px" }}>
                     Train #{result.train.number}
                   </div>
-                  <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: "1.2rem", fontWeight: 700, color: "white", marginBottom: "0.5rem" }}>
+                  <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: "1.2rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.5rem" }}>
                     {result.train.name}
                   </h2>
                   <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -102,24 +102,24 @@ export default function TrainInfoPage() {
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "4px" }}>Total Distance</div>
-                  <div style={{ fontFamily: "'Sora', sans-serif", fontSize: "1.3rem", fontWeight: 700, color: "white" }}>{result.train.distance} <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>km</span></div>
+                  <div style={{ fontFamily: "'Sora', sans-serif", fontSize: "1.3rem", fontWeight: 700, color: "var(--text-primary)" }}>{result.train.distance} <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>km</span></div>
                 </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                 <div>
                   <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "4px" }}>From</div>
-                  <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "white" }}>{result.train.from_station_name || result.train.from_station_code}</div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--text-primary)" }}>{result.train.from_station_name || result.train.from_station_code}</div>
                   <div style={{ fontSize: "0.78rem", color: "hsl(25,90%,60%)" }}>{formatTime(result.train.departure)}</div>
                 </div>
                 <div style={{ textAlign: "center" }}>
                   <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "4px" }}>Duration</div>
-                  <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "white" }}>{result.train.duration_h}h {result.train.duration_m}m</div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--text-primary)" }}>{result.train.duration_h}h {result.train.duration_m}m</div>
                   <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>{result.total_stops} stops</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "4px" }}>To</div>
-                  <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "white" }}>{result.train.to_station_name || result.train.to_station_code}</div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--text-primary)" }}>{result.train.to_station_name || result.train.to_station_code}</div>
                   <div style={{ fontSize: "0.78rem", color: "hsl(145,60%,50%)" }}>{formatTime(result.train.arrival)}</div>
                 </div>
               </div>
@@ -139,7 +139,7 @@ export default function TrainInfoPage() {
             <div style={{ background: "var(--bg-card)", border: "1px solid var(--glass-border)", borderRadius: "16px", overflow: "hidden" }}>
               <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: "8px" }}>
                 <Clock size={15} color="var(--text-muted)" />
-                <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "white" }}>Station Schedule</span>
+                <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)" }}>Station Schedule</span>
                 <span style={{ marginLeft: "auto", fontSize: "0.78rem", color: "var(--text-muted)" }}>{result.total_stops} stops</span>
               </div>
               <div style={{ maxHeight: "400px", overflowY: "auto" }}>

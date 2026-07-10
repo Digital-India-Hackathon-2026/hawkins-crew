@@ -45,7 +45,7 @@ export function Footer() {
                   fontFamily: "'Sora', sans-serif",
                   fontWeight: 800,
                   fontSize: "1rem",
-                  color: "white",
+                  color: "#111111",
                 }}
               >
                 Prayan

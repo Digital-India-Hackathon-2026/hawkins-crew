@@ -98,7 +98,7 @@ export default function FareLookupPage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
                 <div>
                   <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.78rem", color: "hsl(40,95%,55%)", marginBottom: "4px" }}>#{result.train_number} · {result.from_station} → {result.to_station}</div>
-                  <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: "1rem", color: "white" }}>{result.train_name}</div>
+                  <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--text-primary)" }}>{result.train_name}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "2px" }}>{travelClass} Fare</div>

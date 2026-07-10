@@ -91,33 +91,27 @@ export default function HomePage() {
       <section
         style={{
           position: "relative",
-          minHeight: "100vh",
+          minHeight: "55vh",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
+          justifyContent: "flex-end",
+          //overflow: "hidden",
+          backgroundImage: "url('/hero-bg.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          paddingTop: "80px",
+          paddingBottom: "0",
         }}
       >
-        {/* Background image */}
+        {/* Dark overlay for better text contrast */}
         <div
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage: "url(/hero-bg.png)",
-            backgroundSize: "cover",
-            backgroundPosition: "center 60%",
-            filter: "brightness(0.45) saturate(0.8)",
-          }}
-        />
-
-        {/* Gradient overlay */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(to bottom, rgba(10,14,26,0.3) 0%, rgba(10,14,26,0.2) 40%, rgba(10,14,26,0.85) 100%)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.6))",
+            zIndex: 1,
           }}
         />
 
@@ -127,66 +121,27 @@ export default function HomePage() {
           style={{
             position: "relative",
             zIndex: 10,
-            padding: "6rem 1.5rem 3rem",
+            padding: "2rem 1.5rem 0",
             textAlign: "center",
           }}
         >
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            style={{ marginBottom: "1.5rem" }}
-          >
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "6px 16px",
-                borderRadius: "100px",
-                background: "rgba(220,100,30,0.15)",
-                border: "1px solid rgba(220,100,30,0.3)",
-                fontSize: "0.78rem",
-                fontWeight: 600,
-                color: "hsl(25,90%,65%)",
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-              }}
-            >
-              <Train size={13} />
-              Intelligent Multi-Train Journey Planner
-            </span>
-          </motion.div>
-
           {/* Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
             style={{
-              fontFamily: "'Sora', sans-serif",
-              fontSize: "clamp(2.8rem, 7vw, 5rem)",
+              fontFamily: "'Inter', sans-serif",
+              fontSize: "clamp(2.5rem, 7vw, 4.5rem)",
               fontWeight: 800,
-              color: "white",
-              lineHeight: 1.05,
+              color: "#FFFFFF",
+              lineHeight: 1.15,
               letterSpacing: "-0.03em",
-              marginBottom: "1.25rem",
+              marginBottom: "1rem",
+              textShadow: "0 4px 20px rgba(0,0,0,0.5)",
             }}
           >
-            Plan Your
-            <br />
-            <span
-              style={{
-                background:
-                  "linear-gradient(135deg, hsl(35,95%,65%), hsl(25,90%,55%))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              Prayan
-            </span>
+            Find Your Journey
           </motion.h1>
 
           {/* Tagline */}
@@ -195,21 +150,47 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
             style={{
-              fontSize: "clamp(1rem, 2.5vw, 1.2rem)",
-              color: "rgba(255,255,255,0.7)",
+              fontSize: "clamp(1rem, 2.2vw, 1.15rem)",
+              color: "rgba(255, 255, 255, 0.95)",
               maxWidth: "520px",
-              margin: "0 auto 2.5rem",
+              margin: "0 auto 3rem",
               lineHeight: 1.6,
               fontWeight: 400,
+              textShadow: "0 2px 12px rgba(0,0,0,0.4)",
             }}
           >
-            Discover optimal multi-train routes across India's vast railway
-            network. Smart transfers. Reliable connections. Every journey planned.
+            Discover optimal multi-train routes across India
           </motion.p>
 
-          {/* Search Card */}
-          <SearchCard onSearch={handleSearch} isLoading={isLoading} />
+          {/* Search Card - Overlapping both sections */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            style={{
+              position: "relative",
+              maxWidth: "1100px",
+              margin: "0 auto",
+              marginBottom: "-140px",
+              paddingBottom: "1rem",
+              zIndex: 200,
+            }}
+          >
+            <SearchCard onSearch={handleSearch} isLoading={isLoading} />
+          </motion.div>
 
+        </div>
+      </section>
+
+      {/* Info Section */}
+      <section
+        style={{
+          paddingTop: "180px",
+          paddingBottom: "4rem",
+          background: "#FFFFFF",
+        }}
+      >
+        <div className="container">
           {/* Error */}
           {error && (
             <motion.div
@@ -220,15 +201,15 @@ export default function HomePage() {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "8px",
-                marginTop: "1rem",
-                padding: "12px 20px",
-                background: "rgba(220,50,50,0.15)",
-                border: "1px solid rgba(220,50,50,0.25)",
+                marginBottom: "2.5rem",
+                padding: "14px 24px",
+                background: "#FEF2F2",
+                border: "1px solid #FECACA",
                 borderRadius: "12px",
-                fontSize: "0.88rem",
-                color: "hsl(0,80%,65%)",
+                fontSize: "0.9rem",
+                color: "hsl(0,70%,45%)",
                 maxWidth: "640px",
-                margin: "1rem auto 0",
+                margin: "0 auto 2.5rem",
               }}
             >
               <AlertCircle size={16} />
@@ -238,15 +219,16 @@ export default function HomePage() {
 
           {/* Stats strip */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
             style={{
               display: "flex",
               justifyContent: "center",
-              gap: "2.5rem",
-              marginTop: "3rem",
+              alignItems: "center",
+              gap: "clamp(2rem, 6vw, 5rem)",
               flexWrap: "wrap",
+              padding: "1rem 0",
             }}
           >
             {[
@@ -257,21 +239,23 @@ export default function HomePage() {
               <div key={stat.label} style={{ textAlign: "center" }}>
                 <div
                   style={{
-                    fontFamily: "'Sora', sans-serif",
-                    fontSize: "1.5rem",
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: "clamp(1.75rem, 4vw, 2.25rem)",
                     fontWeight: 800,
-                    color: "hsl(35,95%,65%)",
+                    color: "#111111",
                     lineHeight: 1,
+                    letterSpacing: "-0.02em",
                   }}
                 >
                   {stat.value}
                 </div>
                 <div
                   style={{
-                    fontSize: "0.78rem",
-                    color: "rgba(255,255,255,0.5)",
-                    marginTop: "4px",
+                    fontSize: "clamp(0.8rem, 1.5vw, 0.9rem)",
+                    color: "#6B7280",
+                    marginTop: "8px",
                     fontWeight: 500,
+                    letterSpacing: "0.02em",
                   }}
                 >
                   {stat.label}
@@ -285,11 +269,9 @@ export default function HomePage() {
         {searched && (
           <div
             style={{
-              position: "absolute",
-              bottom: "2rem",
-              left: "50%",
-              transform: "translateX(-50%)",
-              color: "rgba(255,255,255,0.4)",
+              textAlign: "center",
+              marginTop: "2rem",
+              color: "#9CA3AF",
               animation: "bounce 1.5s ease-in-out infinite",
             }}
           >
@@ -299,8 +281,8 @@ export default function HomePage() {
 
         <style jsx>{`
           @keyframes bounce {
-            0%, 100% { transform: translateX(-50%) translateY(0); }
-            50% { transform: translateX(-50%) translateY(8px); }
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(8px); }
           }
         `}</style>
       </section>
@@ -310,8 +292,9 @@ export default function HomePage() {
         {searched && (
           <section
             style={{
-              padding: "3rem 0 5rem",
-              background: "var(--bg-primary)",
+              padding: "4rem 0 6rem",
+              background: "#FAFAFA",
+              borderTop: "1px solid #ECECEC",
             }}
           >
             <div className="container">
@@ -319,16 +302,17 @@ export default function HomePage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                style={{ marginBottom: "1.5rem" }}
+                style={{ marginBottom: "2rem" }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                  <Route size={20} color="hsl(25,90%,60%)" />
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                  <Route size={22} color="var(--accent)" />
                   <h2
                     style={{
-                      fontFamily: "'Sora', sans-serif",
-                      fontSize: "1.3rem",
-                      fontWeight: 700,
-                      color: "white",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "1.75rem",
+                      fontWeight: 800,
+                      color: "#111111",
+                      letterSpacing: "-0.02em",
                     }}
                   >
                     {routes.length > 0
@@ -337,7 +321,7 @@ export default function HomePage() {
                   </h2>
                 </div>
                 {lastSearch && (
-                  <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                  <p style={{ fontSize: "0.9rem", color: "#6B7280" }}>
                     {lastSearch.from} → {lastSearch.to} · {lastSearch.date}
                     {routes.length > 0 && " · Ranked by optimal score"}
                   </p>
@@ -349,26 +333,27 @@ export default function HomePage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   style={{
-                    padding: "3rem",
+                    padding: "4rem 3rem",
                     textAlign: "center",
-                    background: "var(--bg-card)",
+                    background: "#FFFFFF",
                     borderRadius: "16px",
-                    border: "1px solid var(--glass-border)",
+                    border: "1px solid #ECECEC",
                   }}
                 >
-                  <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🚂</div>
+                  <div style={{ fontSize: "3.5rem", marginBottom: "1.5rem" }}>🚂</div>
                   <h3
                     style={{
-                      fontFamily: "'Sora', sans-serif",
-                      fontSize: "1.1rem",
-                      fontWeight: 600,
-                      color: "var(--text-primary)",
-                      marginBottom: "8px",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "1.25rem",
+                      fontWeight: 700,
+                      color: "#111111",
+                      marginBottom: "12px",
+                      letterSpacing: "-0.01em",
                     }}
                   >
                     No routes found for this journey
                   </h3>
-                  <p style={{ fontSize: "0.88rem", color: "var(--text-muted)", maxWidth: "400px", margin: "0 auto" }}>
+                  <p style={{ fontSize: "0.95rem", color: "#6B7280", maxWidth: "440px", margin: "0 auto", lineHeight: 1.6 }}>
                     No connecting train combinations were found between these
                     stations on the selected date. Try a different date or
                     nearby stations.
@@ -376,7 +361,7 @@ export default function HomePage() {
                 </motion.div>
               ) : (
                 <div
-                  style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+                  style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
                 >
                   {routes.map((route) => (
                     <JourneyCard

@@ -114,7 +114,7 @@ export function PNRStatusResult({ data }: { data: PNRData }) {
               fontFamily: "'Sora', sans-serif",
               fontWeight: 700,
               fontSize: "0.9rem",
-              color: "white",
+              color: "var(--text-primary)",
             }}
           >
             Train Details
@@ -152,7 +152,7 @@ export function PNRStatusResult({ data }: { data: PNRData }) {
                 fontFamily: "'Sora', sans-serif",
                 fontWeight: 700,
                 fontSize: "0.95rem",
-                color: "white",
+                color: "var(--text-primary)",
               }}
             >
               {data.train_name || "—"}
@@ -230,7 +230,7 @@ export function PNRStatusResult({ data }: { data: PNRData }) {
               fontFamily: "'Sora', sans-serif",
               fontWeight: 700,
               fontSize: "0.9rem",
-              color: "white",
+              color: "var(--text-primary)",
             }}
           >
             Journey Route
@@ -398,7 +398,7 @@ export function PNRStatusResult({ data }: { data: PNRData }) {
               fontFamily: "'Sora', sans-serif",
               fontWeight: 700,
               fontSize: "0.9rem",
-              color: "white",
+              color: "var(--text-primary)",
             }}
           >
             Passenger Status

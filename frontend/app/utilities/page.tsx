@@ -157,7 +157,7 @@ export default function UtilitiesPage() {
                 fontFamily: "'Sora', sans-serif",
                 fontSize: "clamp(1.8rem, 4vw, 2.5rem)",
                 fontWeight: 800,
-                color: "white",
+                color: "var(--text-primary)",
                 letterSpacing: "-0.02em",
                 marginBottom: "0.75rem",
               }}
@@ -269,7 +269,7 @@ export default function UtilitiesPage() {
                         fontFamily: "'Sora', sans-serif",
                         fontSize: "1rem",
                         fontWeight: 700,
-                        color: "white",
+                        color: "var(--text-primary)",
                         marginBottom: "6px",
                       }}
                     >

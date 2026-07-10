@@ -61,14 +61,14 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: (route.rank - 1) * 0.08 }}
       style={{
-        background: "var(--bg-card)",
-        border: `1px solid ${expanded ? "rgba(220,100,30,0.25)" : "rgba(255,255,255,0.08)"}`,
+        background: "#FFFFFF",
+        border: `1px solid ${expanded ? "#D1D5DB" : "#ECECEC"}`,
         borderRadius: "16px",
         overflow: "hidden",
         boxShadow: expanded
-          ? "0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(220,100,30,0.1)"
-          : "0 4px 16px rgba(0,0,0,0.3)",
-        transition: "border-color 0.2s, box-shadow 0.2s",
+          ? "0 4px 12px rgba(0,0,0,0.08)"
+          : "0 2px 4px rgba(0,0,0,0.04)",
+        transition: "all 0.2s ease",
       }}
     >
       {/* Card Header */}
@@ -95,23 +95,22 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
           {/* Rank badge */}
           <div
             style={{
-              width: "42px",
-              height: "42px",
+              width: "48px",
+              height: "48px",
               borderRadius: "12px",
               background:
                 route.rank === 1
-                  ? "linear-gradient(135deg, hsl(40,95%,55%), hsl(30,90%,45%))"
+                  ? "#111111"
                   : route.rank === 2
-                  ? "linear-gradient(135deg, hsl(215,50%,55%), hsl(215,60%,40%))"
+                  ? "#374151"
                   : route.rank === 3
-                  ? "linear-gradient(135deg, hsl(25,60%,50%), hsl(20,65%,38%))"
-                  : "rgba(255,255,255,0.08)",
+                  ? "#6B7280"
+                  : "#F3F4F6",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
-              boxShadow:
-                route.rank === 1 ? "0 4px 12px rgba(220,170,40,0.3)" : "none",
+              border: route.rank > 3 ? "1px solid #E5E7EB" : "none",
             }}
           >
             {route.rank <= 3 ? (
@@ -119,10 +118,10 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
             ) : (
               <span
                 style={{
-                  fontFamily: "'Sora', sans-serif",
+                  fontFamily: "'Inter', sans-serif",
                   fontWeight: 700,
                   fontSize: "1rem",
-                  color: "var(--text-secondary)",
+                  color: "#6B7280",
                 }}
               >
                 #{route.rank}
@@ -144,10 +143,11 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
             >
               <span
                 style={{
-                  fontFamily: "'Sora', sans-serif",
-                  fontSize: "1.4rem",
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: "1.5rem",
                   fontWeight: 800,
-                  color: "white",
+                  color: "#111111",
+                  letterSpacing: "-0.02em",
                 }}
               >
                 {departureTime}
@@ -158,14 +158,14 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  gap: "2px",
-                  minWidth: "80px",
+                  gap: "4px",
+                  minWidth: "90px",
                 }}
               >
                 <span
                   style={{
-                    fontSize: "0.72rem",
-                    color: "var(--text-muted)",
+                    fontSize: "0.75rem",
+                    color: "#6B7280",
                     fontWeight: 500,
                   }}
                 >
@@ -174,9 +174,8 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
                 <div
                   style={{
                     width: "100%",
-                    height: "1.5px",
-                    background:
-                      "linear-gradient(to right, hsl(25,90%,55%), rgba(220,100,30,0.3))",
+                    height: "2px",
+                    background: "#E5E7EB",
                     borderRadius: "2px",
                     position: "relative",
                   }}
@@ -190,26 +189,28 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
                       width: "6px",
                       height: "6px",
                       borderRadius: "50%",
-                      background: "hsl(25,90%,55%)",
+                      background: "#111111",
                     }}
                   />
                 </div>
               </div>
               <span
                 style={{
-                  fontFamily: "'Sora', sans-serif",
-                  fontSize: "1.4rem",
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: "1.5rem",
                   fontWeight: 800,
-                  color: "white",
+                  color: "#111111",
+                  letterSpacing: "-0.02em",
                 }}
               >
                 {arrivalTime}
                 {arrivalDay > departureDay && (
                   <sup
                     style={{
-                      fontSize: "0.65rem",
-                      color: "hsl(25,90%,60%)",
-                      marginLeft: "3px",
+                      fontSize: "0.68rem",
+                      color: "#6B7280",
+                      marginLeft: "4px",
+                      fontWeight: 600,
                     }}
                   >
                     +{arrivalDay - departureDay}d
@@ -260,13 +261,13 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
           {/* Expand icon */}
           <div
             style={{
-              color: "var(--text-muted)",
-              transition: "transform 0.2s, color 0.2s",
+              color: "#9CA3AF",
+              transition: "all 0.2s ease",
               transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
               flexShrink: 0,
             }}
           >
-            <ChevronDown size={20} />
+            <ChevronDown size={22} />
           </div>
         </div>
       </button>
@@ -283,20 +284,20 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
           >
             <div
               style={{
-                borderTop: "1px solid rgba(255,255,255,0.06)",
+                borderTop: "1px solid #F3F4F6",
                 padding: "0 1.5rem 1.5rem",
               }}
             >
               {/* Journey Timeline */}
-              <div style={{ paddingTop: "1rem" }}>
+              <div style={{ paddingTop: "1.25rem" }}>
                 <div
                   style={{
                     fontSize: "0.75rem",
-                    color: "var(--text-muted)",
+                    color: "#6B7280",
                     fontWeight: 600,
                     textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    marginBottom: "12px",
+                    letterSpacing: "0.08em",
+                    marginBottom: "14px",
                   }}
                 >
                   Journey Timeline
@@ -311,21 +312,21 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
               {/* Score Breakdown */}
               <div
                 style={{
-                  marginTop: "1.25rem",
-                  padding: "1rem",
-                  background: "rgba(255,255,255,0.03)",
-                  borderRadius: "10px",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  marginTop: "1.5rem",
+                  padding: "1.25rem",
+                  background: "#FAFAFA",
+                  borderRadius: "12px",
+                  border: "1px solid #F3F4F6",
                 }}
               >
                 <div
                   style={{
                     fontSize: "0.75rem",
-                    color: "var(--text-muted)",
+                    color: "#6B7280",
                     fontWeight: 600,
                     textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    marginBottom: "10px",
+                    letterSpacing: "0.08em",
+                    marginBottom: "12px",
                   }}
                 >
                   Score Breakdown
@@ -341,23 +342,23 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
                     <div key={key}>
                       <div
                         style={{
-                          fontSize: "0.72rem",
-                          color: "var(--text-muted)",
+                          fontSize: "0.75rem",
+                          color: "#9CA3AF",
                           textTransform: "capitalize",
-                          marginBottom: "2px",
+                          marginBottom: "4px",
                         }}
                       >
                         {key.replace(/_/g, " ")}
                       </div>
                       <div
                         style={{
-                          fontSize: "0.9rem",
+                          fontSize: "0.95rem",
                           fontFamily: "'JetBrains Mono', monospace",
                           fontWeight: 600,
                           color:
                             val < 0
-                              ? "hsl(145,60%,50%)"
-                              : "var(--text-primary)",
+                              ? "hsl(145,60%,45%)"
+                              : "#111111",
                         }}
                       >
                         {val.toFixed(0)}
@@ -367,19 +368,19 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
                   <div>
                     <div
                       style={{
-                        fontSize: "0.72rem",
-                        color: "var(--text-muted)",
-                        marginBottom: "2px",
+                        fontSize: "0.75rem",
+                        color: "#9CA3AF",
+                        marginBottom: "4px",
                       }}
                     >
                       Total Score
                     </div>
                     <div
                       style={{
-                        fontSize: "0.9rem",
+                        fontSize: "0.95rem",
                         fontFamily: "'JetBrains Mono', monospace",
                         fontWeight: 700,
-                        color: "hsl(25,90%,62%)",
+                        color: "#111111",
                       }}
                     >
                       {route.score.toFixed(0)}
@@ -391,7 +392,7 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
               {/* Trains used */}
               <div
                 style={{
-                  marginTop: "1rem",
+                  marginTop: "1.25rem",
                   display: "flex",
                   alignItems: "center",
                   gap: "8px",
@@ -400,8 +401,8 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
               >
                 <span
                   style={{
-                    fontSize: "0.78rem",
-                    color: "var(--text-muted)",
+                    fontSize: "0.8rem",
+                    color: "#6B7280",
                     fontWeight: 500,
                   }}
                 >
@@ -411,14 +412,14 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
                   <span
                     key={tn}
                     style={{
-                      padding: "3px 10px",
+                      padding: "4px 12px",
                       borderRadius: "100px",
-                      background: "rgba(220,100,30,0.12)",
-                      border: "1px solid rgba(220,100,30,0.2)",
-                      fontSize: "0.78rem",
+                      background: "#F3F4F6",
+                      border: "1px solid #E5E7EB",
+                      fontSize: "0.8rem",
                       fontFamily: "'JetBrains Mono', monospace",
                       fontWeight: 600,
-                      color: "hsl(25,90%,62%)",
+                      color: "#111111",
                     }}
                   >
                     {tn}
@@ -447,9 +448,9 @@ function StatPill({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "5px",
-        fontSize: "0.78rem",
-        color,
+        gap: "6px",
+        fontSize: "0.82rem",
+        color: "#6B7280",
         fontWeight: 500,
       }}
     >
