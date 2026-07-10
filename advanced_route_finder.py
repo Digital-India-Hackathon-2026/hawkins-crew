@@ -11,6 +11,8 @@ Implements journey planning with:
 
 import pickle
 import heapq
+import math
+import json
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple, Set
 from collections import defaultdict
@@ -48,17 +50,39 @@ class Journey:
 class AdvancedRouteFinder:
     """Advanced route finder with multi-criteria optimization."""
 
-    def __init__(self, graph_path: str = "graph.pkl"):
+    def __init__(self, graph_path: str = "graph.pkl", trains_path: str = "trains.json", use_centrality: bool = False):
         """Initialize route finder and load graph."""
         print("Loading graph...")
         with open(graph_path, "rb") as f:
             self.G = pickle.load(f)
         print(f"Graph loaded: {self.G.number_of_nodes():,} nodes, {self.G.number_of_edges():,} edges")
 
-        # Compute closeness centrality for station-level graph
-        print("Computing closeness centrality...")
-        self.station_centrality = self._compute_station_centrality()
-        print(f"Computed centrality for {len(self.station_centrality)} stations")
+        # Load train names mapping
+        print("Loading train names...")
+        self.train_names = {}
+        try:
+            with open(trains_path, "r", encoding="utf-8") as f:
+                trains_data = json.load(f)
+                if trains_data.get("type") == "FeatureCollection":
+                    for feature in trains_data.get("features", []):
+                        props = feature.get("properties", {})
+                        train_number = props.get("number")
+                        train_name = props.get("name")
+                        if train_number and train_name:
+                            self.train_names[train_number] = train_name
+            print(f"Loaded {len(self.train_names)} train names")
+        except Exception as e:
+            print(f"Warning: Could not load train names: {e}")
+            self.train_names = {}
+
+        # Compute closeness centrality for station-level graph (optional, expensive)
+        if use_centrality:
+            print("Computing closeness centrality...")
+            self.station_centrality = self._compute_station_centrality()
+            print(f"Computed centrality for {len(self.station_centrality)} stations")
+        else:
+            self.station_centrality = {}
+            print("Skipping centrality computation (use_centrality=False)")
 
     def _compute_station_centrality(self) -> Dict[str, float]:
         """
@@ -215,38 +239,138 @@ class AdvancedRouteFinder:
         k: int = 100
     ) -> List[List[str]]:
         """
-        Find shortest path using simple Dijkstra (no station revisit prevention).
+        Find k-shortest paths using modified Yen's algorithm.
 
-        Returns list with single path. Multi-path logic can be added later.
+        Finds multiple diverse routes by exploring different paths through the network.
+        Uses station-level diversity to ensure routes are meaningfully different.
+
+        Args:
+            origin_nodes: List of origin node IDs
+            dest_nodes: Set of destination node IDs
+            k: Maximum number of paths to find
+
+        Returns:
+            List of paths (each path is a list of node IDs)
         """
-        # Track best distance to each node
-        distances = {}  # node -> best distance
-        parent = {}  # node -> parent in shortest path tree
-        pq = []  # (distance, node)
+        print(f"  Finding up to {k} candidate paths...")
 
-        # Initialize from all origin nodes
+        # Find first shortest path
+        first_path = self._dijkstra_shortest_path(origin_nodes, dest_nodes, set())
+        if not first_path:
+            print(f"  WARNING: First path not found!")
+            return []
+
+        paths = [first_path]
+        print(f"  Found path 1 (length {len(first_path)} nodes)")
+
+        # Use a priority queue to find alternative paths
+        # Each candidate is (path_cost, path)
+        candidates = []
+
+        # For finding alternative paths, we'll use a modified approach:
+        # Try to find paths that deviate from previous paths at different points
+        for i in range(1, k):
+            # Extract station-level path from previous paths to avoid too similar routes
+            used_station_sequences = set()
+            for path in paths:
+                stations = tuple(self.G.nodes[node]['station'] for node in path)
+                used_station_sequences.add(stations)
+
+            # Try to find a path that uses different intermediate stations
+            # We do this by temporarily blocking commonly used edges
+            blocked_edges = self._identify_overused_edges(paths)
+
+            # Find path with some edges blocked
+            new_path = self._dijkstra_shortest_path(
+                origin_nodes,
+                dest_nodes,
+                blocked_edges,
+                max_iterations=5000
+            )
+
+            if not new_path:
+                # If no path with blocked edges, try with different penalty approach
+                new_path = self._dijkstra_with_penalty(
+                    origin_nodes,
+                    dest_nodes,
+                    paths,
+                    penalty_factor=0.5 + (i * 0.1)
+                )
+
+            if new_path:
+                # Check if this path is meaningfully different
+                new_stations = tuple(self.G.nodes[node]['station'] for node in new_path)
+
+                # Calculate similarity with existing paths
+                is_diverse = True
+                for existing_stations in used_station_sequences:
+                    # If > 80% of stations are the same, consider it too similar
+                    common = sum(1 for s in new_stations if s in existing_stations)
+                    similarity = common / max(len(new_stations), len(existing_stations))
+                    if similarity > 0.8:
+                        is_diverse = False
+                        break
+
+                if is_diverse:
+                    paths.append(new_path)
+                    print(f"  Found path {len(paths)} (length {len(new_path)} nodes)")
+
+                    # Stop if we've found enough diverse paths
+                    if len(paths) >= min(k, 10):  # Cap at 10 to avoid excessive computation
+                        break
+
+            # Stop trying if we've exhausted reasonable attempts
+            if i > len(paths) * 5:  # Max 5 attempts per found path
+                break
+
+        print(f"  Total paths found: {len(paths)}")
+        return paths
+
+    def _dijkstra_shortest_path(
+        self,
+        origin_nodes: List[str],
+        dest_nodes: Set[str],
+        blocked_edges: Set[Tuple[str, str]],
+        max_iterations: int = 500000
+    ) -> Optional[List[str]]:
+        """
+        Find single shortest path using Dijkstra's algorithm.
+
+        Args:
+            origin_nodes: List of origin node IDs
+            dest_nodes: Set of destination node IDs
+            blocked_edges: Set of (from_node, to_node) tuples to avoid
+            max_iterations: Maximum iterations to prevent infinite loops
+
+        Returns:
+            Path as list of node IDs, or None if no path found
+        """
+        distances = {}
+        parent = {}
+        pq = []
+
         for origin in origin_nodes:
             distances[origin] = 0
             heapq.heappush(pq, (0, origin))
 
         visited = set()
         iterations = 0
+        debug_interval = max_iterations // 10
 
-        while pq:
+        while pq and iterations < max_iterations:
             iterations += 1
-            if iterations % 1000 == 0:
-                print(f"  Iter {iterations}: PQ size={len(pq)}, Visited={len(visited)}")
+
+            if iterations % debug_interval == 0:
+                print(f"    Dijkstra iter {iterations}: visited={len(visited)}, pq_size={len(pq)}")
 
             curr_dist, curr_node = heapq.heappop(pq)
 
-            # Skip if already processed
             if curr_node in visited:
                 continue
             visited.add(curr_node)
 
-            # Found destination - reconstruct path
+            # Found destination
             if curr_node in dest_nodes:
-                print(f"  Found destination at iteration {iterations}")
                 path = []
                 node = curr_node
                 while node in parent:
@@ -254,7 +378,7 @@ class AdvancedRouteFinder:
                     node = parent[node]
                 path.append(node)
                 path.reverse()
-                return [path]
+                return path
 
             # Explore neighbors
             if curr_node not in self.G:
@@ -264,18 +388,24 @@ class AdvancedRouteFinder:
                 if next_node in visited:
                     continue
 
-                # Get edge data and apply multi-criteria scoring
+                # Skip blocked edges
+                if (curr_node, next_node) in blocked_edges:
+                    continue
+
+                # Get edge cost
                 edge_data = self.G[curr_node][next_node]
                 edge_info = list(edge_data.values())[0]
                 edge_type = edge_info['edge_type']
                 weight = edge_info['weight']
 
+                # Skip edges with invalid weights
+                if math.isnan(weight) or math.isinf(weight) or weight < 0:
+                    continue
+
                 # Calculate edge cost with multi-criteria
                 if edge_type == 'travel':
-                    # Travel edges: just time cost
                     edge_cost = weight * WEIGHTS['travel_time']
                 elif edge_type == 'transfer':
-                    # Transfer edges: penalty + waiting + centrality bonus
                     curr_station = self.G.nodes[curr_node]['station']
                     edge_cost = (
                         WEIGHTS['transfer_penalty'] +
@@ -287,14 +417,149 @@ class AdvancedRouteFinder:
 
                 new_dist = curr_dist + edge_cost
 
-                # Update if better path found
                 if next_node not in distances or new_dist < distances[next_node]:
                     distances[next_node] = new_dist
                     parent[next_node] = curr_node
                     heapq.heappush(pq, (new_dist, next_node))
 
-        print(f"  No path found after {iterations} iterations")
-        return []
+        return None
+
+    def _identify_overused_edges(self, paths: List[List[str]]) -> Set[Tuple[str, str]]:
+        """
+        Identify edges that appear in multiple paths.
+        These will be temporarily blocked to encourage path diversity.
+
+        Args:
+            paths: List of paths found so far
+
+        Returns:
+            Set of (from_node, to_node) tuples to block
+        """
+        edge_usage = defaultdict(int)
+
+        for path in paths:
+            for i in range(len(path) - 1):
+                edge = (path[i], path[i + 1])
+                edge_usage[edge] += 1
+
+        # Block edges used in most paths (but keep at least some options)
+        threshold = max(1, len(paths) // 2)
+        blocked = {edge for edge, count in edge_usage.items() if count >= threshold}
+
+        # Limit blocking to avoid making problem unsolvable
+        if len(blocked) > 50:
+            # Only block the most frequently used edges
+            sorted_edges = sorted(edge_usage.items(), key=lambda x: x[1], reverse=True)
+            blocked = {edge for edge, _ in sorted_edges[:50]}
+
+        return blocked
+
+    def _dijkstra_with_penalty(
+        self,
+        origin_nodes: List[str],
+        dest_nodes: Set[str],
+        existing_paths: List[List[str]],
+        penalty_factor: float = 0.5
+    ) -> Optional[List[str]]:
+        """
+        Find path with penalty for using edges from existing paths.
+        This encourages finding diverse routes.
+
+        Args:
+            origin_nodes: List of origin node IDs
+            dest_nodes: Set of destination node IDs
+            existing_paths: Paths already found
+            penalty_factor: Multiplier for edge reuse penalty (0.5 = 50% increase)
+
+        Returns:
+            Path as list of node IDs, or None if no path found
+        """
+        # Count edge usage in existing paths
+        edge_usage = defaultdict(int)
+        for path in existing_paths:
+            for i in range(len(path) - 1):
+                edge_usage[(path[i], path[i + 1])] += 1
+
+        distances = {}
+        parent = {}
+        pq = []
+
+        for origin in origin_nodes:
+            distances[origin] = 0
+            heapq.heappush(pq, (0, origin))
+
+        visited = set()
+        iterations = 0
+        max_iterations = 5000
+
+        while pq and iterations < max_iterations:
+            iterations += 1
+
+            curr_dist, curr_node = heapq.heappop(pq)
+
+            if curr_node in visited:
+                continue
+            visited.add(curr_node)
+
+            if curr_node in dest_nodes:
+                path = []
+                node = curr_node
+                while node in parent:
+                    path.append(node)
+                    node = parent[node]
+                path.append(node)
+                path.reverse()
+                return path
+
+            if curr_node not in self.G:
+                continue
+
+            for next_node in self.G[curr_node]:
+                if next_node in visited:
+                    continue
+
+                edge_data = self.G[curr_node][next_node]
+                edge_info = list(edge_data.values())[0]
+                edge_type = edge_info['edge_type']
+                weight = edge_info['weight']
+
+                # Skip edges with invalid weights
+                if math.isnan(weight) or math.isinf(weight) or weight < 0:
+                    continue
+
+                # Calculate base edge cost
+                if edge_type == 'travel':
+                    edge_cost = weight * WEIGHTS['travel_time']
+                elif edge_type == 'transfer':
+                    curr_station = self.G.nodes[curr_node]['station']
+                    edge_cost = (
+                        WEIGHTS['transfer_penalty'] +
+                        weight * WEIGHTS['waiting_time'] +
+                        self._get_centrality_bonus(curr_station)
+                    )
+                else:
+                    edge_cost = weight
+
+                # Apply penalty for reused edges
+                edge_key = (curr_node, next_node)
+                if edge_key in edge_usage:
+                    usage_penalty = 1.0 + (penalty_factor * edge_usage[edge_key])
+                    edge_cost *= usage_penalty
+
+                new_dist = curr_dist + edge_cost
+
+                if next_node not in distances or new_dist < distances[next_node]:
+                    distances[next_node] = new_dist
+                    parent[next_node] = curr_node
+                    heapq.heappush(pq, (new_dist, next_node))
+
+        return None
+
+    def _get_station_name(self, station_code: str) -> str:
+        """Get station name from graph metadata."""
+        stations_metadata = self.G.graph.get('stations', {})
+        station_info = stations_metadata.get(station_code, {})
+        return station_info.get('station_name', '')
 
     def _build_journey(
         self,
@@ -345,8 +610,11 @@ class AdvancedRouteFinder:
                     current_segment = {
                         'type': 'travel',
                         'train_number': train_num,
+                        'train_name': self.train_names.get(train_num, ''),
                         'from_station': u_node['station'],
+                        'from_station_name': self._get_station_name(u_node['station']),
                         'to_station': v_node['station'],
+                        'to_station_name': self._get_station_name(v_node['station']),
                         'departure_time': u_node['departure'],
                         'arrival_time': v_node['arrival'],
                         'departure_day': u_node['day'],
@@ -358,6 +626,7 @@ class AdvancedRouteFinder:
                 else:
                     # Continue segment - update destination
                     current_segment['to_station'] = v_node['station']
+                    current_segment['to_station_name'] = self._get_station_name(v_node['station'])
                     current_segment['arrival_time'] = v_node['arrival']
                     current_segment['arrival_day'] = v_node['day']
 
@@ -381,6 +650,7 @@ class AdvancedRouteFinder:
                 segments.append({
                     'type': 'transfer',
                     'station': station,
+                    'station_name': self._get_station_name(station),
                     'waiting_time_sec': waiting_time,
                     'waiting_time_min': waiting_time // 60,
                 })

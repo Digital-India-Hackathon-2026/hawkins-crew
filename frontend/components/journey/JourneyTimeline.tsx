@@ -23,6 +23,7 @@ export function JourneyTimeline({ segments, fromStation, toStation }: JourneyTim
               {isFirst && (
                 <TimelineStation
                   code={seg.from_station}
+                  name={seg.from_station_name}
                   time={formatTime(seg.departure_time)}
                   day={seg.departure_day}
                   type="origin"
@@ -47,46 +48,58 @@ export function JourneyTimeline({ segments, fromStation, toStation }: JourneyTim
                     marginLeft: "20px",
                     marginTop: "8px",
                     marginBottom: "8px",
-                    padding: "12px 16px",
+                    padding: "14px 18px",
                     background: "#FAFAFA",
                     borderRadius: "12px",
-                    border: "1px solid #F3F4F6",
+                    border: "1px solid #E5E7EB",
                     flex: 1,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                    <Train size={15} color="#111111" />
-                    <span
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: "0.85rem",
-                        fontWeight: 600,
-                        color: "#111111",
-                      }}
-                    >
-                      Train {seg.train_number}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      fontSize: "0.85rem",
-                      color: "#6B7280",
-                    }}
-                  >
-                    <span>{seg.from_station}</span>
-                    <ArrowRight size={13} />
-                    <span>{seg.to_station}</span>
-                    <span style={{ color: "#9CA3AF", marginLeft: "auto" }}>
-                      {formatTime(seg.departure_time)} → {formatTime(seg.arrival_time)}
-                      {seg.arrival_day > seg.departure_day && (
-                        <span style={{ color: "#6B7280", marginLeft: "4px" }}>
-                          +{seg.arrival_day - seg.departure_day}d
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {/* First line: Train number and name */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <Train size={16} color="#111111" />
+                      <span
+                        style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: "0.88rem",
+                          fontWeight: 600,
+                          color: "#111111",
+                        }}
+                      >
+                        Train {seg.train_number}
+                      </span>
+                      {seg.train_name && (
+                        <span
+                          style={{
+                            fontSize: "0.88rem",
+                            fontWeight: 500,
+                            color: "#374151",
+                          }}
+                        >
+                          {seg.train_name}
                         </span>
                       )}
-                    </span>
+                      <span style={{ color: "#9CA3AF", marginLeft: "auto", fontSize: "0.82rem" }}>
+                        {formatTime(seg.departure_time)} → {formatTime(seg.arrival_time)}
+                        {seg.arrival_day > seg.departure_day && (
+                          <span style={{ color: "#6B7280", marginLeft: "4px" }}>
+                            +{seg.arrival_day - seg.departure_day}d
+                          </span>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Second line: Station codes and names */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", paddingLeft: "26px" }}>
+                      <span style={{ color: "#6B7280", fontSize: "0.82rem", fontWeight: 500 }}>
+                        {seg.from_station_name ? `${seg.from_station_name} (${seg.from_station})` : seg.from_station}
+                      </span>
+                      <ArrowRight size={14} color="#9CA3AF" />
+                      <span style={{ color: "#6B7280", fontSize: "0.82rem", fontWeight: 500 }}>
+                        {seg.to_station_name ? `${seg.to_station_name} (${seg.to_station})` : seg.to_station}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -95,6 +108,7 @@ export function JourneyTimeline({ segments, fromStation, toStation }: JourneyTim
               {(isLast || segments[i + 1]?.type === "transfer") && (
                 <TimelineStation
                   code={seg.to_station}
+                  name={seg.to_station_name}
                   time={formatTime(seg.arrival_time)}
                   day={seg.arrival_day}
                   type={isLast ? "destination" : "transfer-arrival"}
@@ -150,7 +164,7 @@ export function JourneyTimeline({ segments, fromStation, toStation }: JourneyTim
                       fontWeight: 500,
                     }}
                   >
-                    {seg.waiting_time_min}m waiting at {seg.station}
+                    {seg.waiting_time_min}m waiting at {seg.station_name ? `${seg.station_name} (${seg.station})` : seg.station}
                   </span>
                 </div>
               </div>
@@ -159,6 +173,7 @@ export function JourneyTimeline({ segments, fromStation, toStation }: JourneyTim
               {i + 1 < segments.length && segments[i + 1]?.type === "travel" && (
                 <TimelineStation
                   code={(segments[i + 1] as any).from_station}
+                  name={(segments[i + 1] as any).from_station_name}
                   time={formatTime((segments[i + 1] as any).departure_time)}
                   day={(segments[i + 1] as any).departure_day}
                   type="transfer"
@@ -176,11 +191,13 @@ export function JourneyTimeline({ segments, fromStation, toStation }: JourneyTim
 
 function TimelineStation({
   code,
+  name,
   time,
   day,
   type,
 }: {
   code: string;
+  name?: string;
   time: string;
   day: number;
   type: "origin" | "destination" | "transfer" | "transfer-arrival";
@@ -214,6 +231,11 @@ function TimelineStation({
           }}
         >
           {code}
+          {name && (
+            <span style={{ fontWeight: 600, color: "#374151", marginLeft: "8px" }}>
+              {name}
+            </span>
+          )}
         </span>
         <span style={{ fontSize: "0.85rem", color: "#6B7280", fontWeight: 500 }}>
           {time}
