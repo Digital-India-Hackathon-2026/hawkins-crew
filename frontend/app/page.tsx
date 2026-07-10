@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { AlertCircle, Route, ChevronDown, Train, Map as MapIcon } from "lucide-react";
 import { SearchCard } from "@/components/search/SearchCard";
 import { JourneyCard } from "@/components/journey/JourneyCard";
-import { RouteMapWrapper } from "@/components/journey/RouteMapWrapper";
+import { MultiRouteMapWrapper } from "@/components/map/MultiRouteMapWrapper";
 import { useStations } from "@/contexts/StationsContext";
 import { findRoutes, Route as RouteType } from "@/lib/api";
 
@@ -371,39 +371,44 @@ export default function HomePage() {
                 </motion.div>
               ) : (
                 <>
-                  {/* Route Map */}
+                  {/* Interactive Multi-Route Map */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4 }}
                     style={{ marginBottom: "2rem" }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-                      <MapIcon size={18} color="var(--accent)" />
-                      <h3
-                        style={{
-                          fontFamily: "'Inter', sans-serif",
-                          fontSize: "1.1rem",
-                          fontWeight: 700,
-                          color: "#111111",
-                          letterSpacing: "-0.01em",
-                        }}
-                      >
-                        Route Visualization
-                      </h3>
-                      <span
-                        style={{
-                          fontSize: "0.8rem",
-                          color: "#6B7280",
-                          fontWeight: 500,
-                        }}
-                      >
-                        Showing route #{selectedRouteIndex + 1}
-                      </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
+                      <MapIcon size={20} color="var(--accent)" />
+                      <div style={{ flex: 1 }}>
+                        <h3
+                          style={{
+                            fontFamily: "'Inter', sans-serif",
+                            fontSize: "1.3rem",
+                            fontWeight: 800,
+                            color: "#111111",
+                            letterSpacing: "-0.02em",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          Interactive Route Map
+                        </h3>
+                        <p
+                          style={{
+                            fontSize: "0.85rem",
+                            color: "#6B7280",
+                            fontWeight: 500,
+                          }}
+                        >
+                          Comparing {routes.length} route{routes.length > 1 ? "s" : ""} · Click any route to explore · Zoom and pan to navigate
+                        </p>
+                      </div>
                     </div>
-                    <RouteMapWrapper
-                      route={routes[selectedRouteIndex]}
+                    <MultiRouteMapWrapper
+                      routes={routes}
                       stations={stations}
+                      selectedRouteIndex={selectedRouteIndex}
+                      onRouteSelect={setSelectedRouteIndex}
                     />
                   </motion.div>
 
