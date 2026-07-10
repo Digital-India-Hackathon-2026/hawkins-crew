@@ -14,6 +14,14 @@ export const api = axios.create({
   },
 });
 
+const adminApi = axios.create({
+  baseURL: "/api",
+  timeout: 30000,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 // Types
 
 export interface TrainSegment {
@@ -355,4 +363,118 @@ export function formatDuration(seconds: number): string {
 export function formatTime(timeStr: string | null): string {
   if (!timeStr || timeStr === "None") return "--:--";
   return timeStr.substring(0, 5); // "HH:MM"
+}
+
+// ─── Admin Dashboard ─────────────────────────────────────────────────────────
+
+export interface DashboardMetrics {
+  totalSearches: number;
+  totalTransfers: number;
+  successfulTransfers: number;
+  failedTransfers: number;
+  successRate: number;
+  avgWaitingTime: number;
+}
+
+export interface StationSuccessRate {
+  station: string;
+  successRate: number;
+  total: number;
+  successful: number;
+  failed: number;
+  avgWaitTime: number;
+}
+
+export interface ProblematicTrainPair {
+  trainPair: string;
+  totalAttempts: number;
+  failures: number;
+  successRate: number;
+}
+
+export interface TransferAnalytics {
+  stationSuccessRates: StationSuccessRate[];
+  problematicTrainPairs: ProblematicTrainPair[];
+}
+
+export interface StationDetails {
+  stationCode: string;
+  totalTransfers: number;
+  successfulTransfers: number;
+  failedTransfers: number;
+  successRate: number;
+  avgWaitingTime: number;
+  topTrainPairs: { trainPair: string; count: number }[];
+}
+
+export interface OptimizerMetrics {
+  avgWaitingTime: number;
+  successRate: number;
+  totalTransfers: number;
+  problematicConnections: number;
+}
+
+export interface TrainStop {
+  stationCode: string;
+  arrivalBefore: string | null;
+  departureBefore: string | null;
+  arrivalAfter: string | null;
+  departureAfter: string | null;
+}
+
+export interface RecommendedChange {
+  trainNumber: string;
+  trainName: string;
+  currentDeparture: string;
+  recommendedDeparture: string;
+  shiftMinutes: number;
+  reason: string;
+  impactedConnections: number;
+  improvementScore: number;
+  route: string[];
+  stopsAt: TrainStop[];
+}
+
+export interface Recommendation {
+  id: string;
+  type: 'timing' | 'platform' | 'frequency' | 'route';
+  priority: 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  estimatedImpact: string;
+  affectedTrains: string[];
+  createdAt: string;
+}
+
+export interface OptimizerResult {
+  stationCode: string;
+  maxShiftMinutes: number;
+  before: OptimizerMetrics;
+  after: OptimizerMetrics;
+  recommendedChanges: RecommendedChange[];
+  recommendations: Recommendation[];
+}
+
+export async function getDashboardMetrics(): Promise<DashboardMetrics> {
+  const res = await adminApi.get<DashboardMetrics>("/admin/dashboard-metrics");
+  return res.data;
+}
+
+export async function getTransferAnalytics(): Promise<TransferAnalytics> {
+  const res = await adminApi.get<TransferAnalytics>("/admin/transfer-analytics");
+  return res.data;
+}
+
+export async function getStationDetails(code: string): Promise<StationDetails> {
+  const res = await adminApi.get<StationDetails>(`/admin/station/${code}`);
+  return res.data;
+}
+
+export async function runOptimization(params: {
+  stationCode: string;
+  trainNumbers: string[];
+  maxShiftMinutes?: number;
+}): Promise<OptimizerResult> {
+  const res = await adminApi.post<OptimizerResult>("/admin/optimize", params);
+  return res.data;
 }
