@@ -354,7 +354,7 @@ export default function AvailabilityPage() {
                       fontFamily: "'Sora', sans-serif",
                       fontWeight: 700,
                       fontSize: "1rem",
-                      color: "white",
+                      color: "var(--text-primary)",
                       marginTop: "4px",
                     }}
                   >

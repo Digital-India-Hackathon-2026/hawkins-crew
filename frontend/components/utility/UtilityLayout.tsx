@@ -78,7 +78,7 @@ export function UtilityLayout({
                   fontFamily: "'Sora', sans-serif",
                   fontSize: "1.6rem",
                   fontWeight: 800,
-                  color: "white",
+                  color: "var(--text-primary)",
                   letterSpacing: "-0.02em",
                 }}
               >
