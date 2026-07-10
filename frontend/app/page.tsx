@@ -26,6 +26,7 @@ export default function HomePage() {
 
     try {
       const result = await findRoutes(from, to, date);
+      console.log("🚂 Route search result:", JSON.stringify(result, null, 2));
       setRoutes(result.routes || []);
       setLastSearch({ from, to, date });
       setSearched(true);
