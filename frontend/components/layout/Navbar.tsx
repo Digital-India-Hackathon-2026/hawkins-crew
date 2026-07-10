@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Train, Menu, X, ChevronDown, Wrench } from "lucide-react";
+import { Train, Menu, X, ChevronDown, Wrench, Shield, Users } from "lucide-react";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -15,6 +15,9 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  const isAdminMode = pathname.startsWith("/admin");
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -54,24 +57,34 @@ export function Navbar() {
               height: "64px",
             }}
           >
-            {/* Logo */}
-            <Link
-              href="/"
-              style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none" }}
+            {/* Logo - Mode Toggle */}
+            <button
+              onClick={() => router.push(isAdminMode ? "/" : "/admin/dashboard")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+              }}
+              aria-label={isAdminMode ? "Switch to Passenger Mode" : "Switch to Admin Mode"}
             >
               <div
                 style={{
                   width: "38px",
                   height: "38px",
                   borderRadius: "10px",
-                  background: "#111111",
+                  background: isAdminMode ? "hsl(25,90%,55%)" : "#111111",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
+                  transition: "all 0.3s ease",
                 }}
               >
-                <Train size={20} color="white" />
+                {isAdminMode ? <Shield size={20} color="white" /> : <Train size={20} color="white" />}
               </div>
               <div>
                 <div
@@ -89,79 +102,84 @@ export function Navbar() {
                 <div
                   style={{
                     fontSize: "0.68rem",
-                    color: "#6B7280",
+                    color: isAdminMode ? "hsl(25,90%,55%)" : "#6B7280",
                     fontWeight: 500,
                     letterSpacing: "0.1em",
                     textTransform: "uppercase",
                     marginTop: "2px",
+                    transition: "color 0.3s ease",
                   }}
                 >
-                  Railway
+                  {isAdminMode ? "Admin" : "Railway"}
                 </div>
               </div>
-            </Link>
-
-            {/* Desktop nav */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-              className="desktop-nav"
-            >
-              {navLinks.map((link) => {
-                const active =
-                  link.href === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(link.href);
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "10px 18px",
-                      borderRadius: "10px",
-                      fontSize: "0.9rem",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      transition: "all 0.2s ease",
-                      color: active ? "#111111" : "#374151",
-                      background: active
-                        ? "#F3F4F6"
-                        : "transparent",
-                      border: active
-                        ? "1px solid #E5E7EB"
-                        : "1px solid transparent",
-                    }}
-                  >
-                    {link.href === "/utilities" && <Wrench size={15} />}
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="mobile-menu-btn"
-              aria-label="Toggle menu"
-              style={{
-                background: "#FFFFFF",
-                border: "1.5px solid #ECECEC",
-                borderRadius: "10px",
-                padding: "8px",
-                cursor: "pointer",
-                color: "#111111",
-                display: "none",
-              }}
-            >
-              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
+
+            {/* Desktop nav - Only show in passenger mode */}
+            {!isAdminMode && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+                className="desktop-nav"
+              >
+                {navLinks.map((link) => {
+                  const active =
+                    link.href === "/"
+                      ? pathname === "/"
+                      : pathname.startsWith(link.href);
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "10px 18px",
+                        borderRadius: "10px",
+                        fontSize: "0.9rem",
+                        fontWeight: 600,
+                        textDecoration: "none",
+                        transition: "all 0.2s ease",
+                        color: active ? "#111111" : "#374151",
+                        background: active
+                          ? "#F3F4F6"
+                          : "transparent",
+                        border: active
+                          ? "1px solid #E5E7EB"
+                          : "1px solid transparent",
+                      }}
+                    >
+                      {link.href === "/utilities" && <Wrench size={15} />}
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Mobile menu button - Only in passenger mode */}
+            {!isAdminMode && (
+              <button
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className="mobile-menu-btn"
+                aria-label="Toggle menu"
+                style={{
+                  background: "#FFFFFF",
+                  border: "1.5px solid #ECECEC",
+                  borderRadius: "10px",
+                  padding: "8px",
+                  cursor: "pointer",
+                  color: "#111111",
+                  display: "none",
+                }}
+              >
+                {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            )}
           </div>
         </div>
       </nav>

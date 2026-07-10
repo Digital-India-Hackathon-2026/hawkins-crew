@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "tsx scripts/seedDemoLogs.ts"
   },
   "dependencies": {
+    "@types/leaflet": "^1.9.21",
     "axios": "^1.18.1",
     "framer-motion": "^12.42.2",
     "fuse.js": "^7.4.2",
@@ -19,6 +21,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-leaflet": "^5.0.0",
+    "recharts": "^3.9.2",
     "swr": "^2.4.2"
   },
   "devDependencies": {
@@ -30,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
+    "tsx": "^4.23.0",
     "typescript": "^5"
   }
 }
