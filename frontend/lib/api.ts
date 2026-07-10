@@ -1,5 +1,9 @@
 import axios from "axios";
 
+// Re-export Station from the context (source of truth is StationsContext)
+export type { Station } from "@/contexts/StationsContext";
+import type { Station } from "@/contexts/StationsContext";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export const api = axios.create({
@@ -11,15 +15,6 @@ export const api = axios.create({
 });
 
 // Types
-export interface Station {
-  code: string;
-  name: string;
-  state: string | null;
-  zone: string | null;
-  address: string | null;
-  latitude: number | null;
-  longitude: number | null;
-}
 
 export interface TrainSegment {
   type: "travel";
