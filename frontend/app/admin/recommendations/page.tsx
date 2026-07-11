@@ -139,7 +139,7 @@ export default function RecommendationsPage() {
           System-generated optimization recommendations based on transfer analytics
         </p>
 
-        {/* Info Banner */}
+        {/* Info Banner
         <div
           style={{
             display: "flex",
@@ -175,7 +175,7 @@ export default function RecommendationsPage() {
               derived from actual CP-SAT optimization runs.
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Recommendations List */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
