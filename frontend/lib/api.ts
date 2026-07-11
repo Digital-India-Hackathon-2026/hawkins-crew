@@ -84,6 +84,7 @@ export interface RouteResponse {
   from: string;
   to: string;
   date: string;
+  viaStations?: string[] | null;
   routes?: Route[];
   message?: string;
 }
@@ -127,9 +128,18 @@ export interface TrainStop {
 export async function findRoutes(
   from: string,
   to: string,
-  date: string
+  date: string,
+  viaStations?: string[]
 ): Promise<RouteResponse> {
-  const res = await api.post<RouteResponse>("/route", { from, to, date });
+  const payload: { from: string; to: string; date: string; viaStations?: string[] } = {
+    from,
+    to,
+    date,
+  };
+  if (viaStations && viaStations.length > 0) {
+    payload.viaStations = viaStations;
+  }
+  const res = await api.post<RouteResponse>("/route", payload);
   return res.data;
 }
 

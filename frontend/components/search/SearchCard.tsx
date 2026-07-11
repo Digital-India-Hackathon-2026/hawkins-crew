@@ -4,16 +4,18 @@ import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeftRight, Search, Calendar, AlertCircle, Loader2 } from "lucide-react";
 import { StationAutocomplete } from "@/components/station/StationAutocomplete";
+import { ViaStationSelector } from "./ViaStationSelector";
 import { Station } from "@/lib/api";
 
 interface SearchCardProps {
-  onSearch: (from: string, to: string, date: string) => void;
+  onSearch: (from: string, to: string, date: string, viaStations?: string[]) => void;
   isLoading: boolean;
 }
 
 export function SearchCard({ onSearch, isLoading }: SearchCardProps) {
   const [from, setFrom] = useState<Station | null>(null);
   const [to, setTo] = useState<Station | null>(null);
+  const [viaStations, setViaStations] = useState<string[]>([]);
   const [date, setDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -40,7 +42,18 @@ export function SearchCard({ onSearch, isLoading }: SearchCardProps) {
       setError("Please select a travel date.");
       return;
     }
-    onSearch(from.code, to.code, date);
+
+    // Validate via stations
+    if (viaStations.includes(from.code)) {
+      setError("Via station cannot be the same as source.");
+      return;
+    }
+    if (viaStations.includes(to.code)) {
+      setError("Via station cannot be the same as destination.");
+      return;
+    }
+
+    onSearch(from.code, to.code, date, viaStations.length > 0 ? viaStations : undefined);
   };
 
   return (
@@ -61,7 +74,7 @@ export function SearchCard({ onSearch, isLoading }: SearchCardProps) {
         zIndex: 200,
       }}
     >
-      {/* All inputs in one line */}
+      {/* Main inputs in one line */}
       <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap", position: "static", zIndex: 200 }}>
         <div style={{ position: "relative", flex: "1", minWidth: "200px", zIndex: 200 }}>
           <StationAutocomplete
@@ -210,6 +223,13 @@ export function SearchCard({ onSearch, isLoading }: SearchCardProps) {
           )}
         </motion.button>
       </div>
+
+      {/* Via Stations */}
+      <ViaStationSelector
+        viaStations={viaStations}
+        onViaStationsChange={setViaStations}
+        excludedStations={[from?.code, to?.code].filter(Boolean) as string[]}
+      />
 
       {/* Error */}
       {error && (

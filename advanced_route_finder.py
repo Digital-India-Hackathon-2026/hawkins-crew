@@ -232,6 +232,336 @@ class AdvancedRouteFinder:
         journeys.sort()
         return journeys[:max_routes]
 
+    def find_routes_with_via_stations(
+        self,
+        from_station: str,
+        to_station: str,
+        via_stations: List[str],
+        travel_date: datetime,
+        max_routes: int = 5,
+        max_candidates: int = 100
+    ) -> List[Journey]:
+        """
+        Find routes that pass through mandatory intermediate (via) stations.
+
+        Args:
+            from_station: Origin station code
+            to_station: Destination station code
+            via_stations: List of mandatory intermediate station codes
+            travel_date: Date of travel
+            max_routes: Maximum number of routes to return
+            max_candidates: Maximum candidate paths to explore per segment
+
+        Returns:
+            List of Journey objects that pass through all via stations
+        """
+        print(f"\nFinding routes with via stations: {from_station} → {' → '.join(via_stations)} → {to_station}")
+
+        # Validate via stations
+        if not via_stations:
+            return self.find_routes(from_station, to_station, travel_date, max_routes, max_candidates)
+
+        # Check for duplicates
+        all_stations = [from_station] + via_stations + [to_station]
+        if len(all_stations) != len(set(all_stations)):
+            print("Error: Duplicate stations in route")
+            return []
+
+        # Build segments: source → via1 → via2 → ... → destination
+        segments = []
+        current_station = from_station
+
+        for via_station in via_stations:
+            segments.append((current_station, via_station))
+            current_station = via_station
+        segments.append((current_station, to_station))
+
+        print(f"Route segments: {segments}")
+
+        # Find routes for each segment
+        all_segment_routes = []
+        for seg_from, seg_to in segments:
+            seg_routes = self.find_routes(
+                seg_from, seg_to, travel_date,
+                max_routes=max_candidates,
+                max_candidates=max_candidates
+            )
+            if not seg_routes:
+                print(f"No routes found for segment {seg_from} → {seg_to}")
+                return []
+            all_segment_routes.append(seg_routes)
+
+        # Combine segments into complete journeys
+        combined_journeys = self._combine_via_segments(all_segment_routes, from_station, to_station)
+
+        print(f"Combined {len(combined_journeys)} valid journeys from segment combinations")
+
+        if not combined_journeys:
+            print("WARNING: No valid timing combinations found between segments")
+            print("This might happen if connecting trains don't align within transfer windows")
+
+        # Sort by score and return top routes
+        combined_journeys.sort()
+        return combined_journeys[:max_routes]
+
+    def _combine_via_segments(
+        self,
+        segment_routes: List[List[Journey]],
+        origin_station: str,
+        dest_station: str
+    ) -> List[Journey]:
+        """
+        Combine multiple route segments into complete journeys.
+
+        Args:
+            segment_routes: List of route lists, one per segment
+            origin_station: Overall origin
+            dest_station: Overall destination
+
+        Returns:
+            List of combined Journey objects
+        """
+        if not segment_routes:
+            return []
+
+        # Use iterative combination to generate all possible complete journeys
+        combined = []
+
+        # Start with first segment routes
+        for route1 in segment_routes[0]:
+            self._combine_recursive(
+                segment_routes, 1, [route1], origin_station, dest_station, combined
+            )
+
+        return combined
+
+    def _combine_recursive(
+        self,
+        segment_routes: List[List[Journey]],
+        current_index: int,
+        current_combination: List[Journey],
+        origin_station: str,
+        dest_station: str,
+        result: List[Journey]
+    ):
+        """
+        Recursively combine route segments.
+        """
+        # Base case: all segments combined
+        if current_index >= len(segment_routes):
+            # Merge the combination into a single journey
+            merged = self._merge_journey_segments(
+                current_combination, origin_station, dest_station
+            )
+            if merged:
+                result.append(merged)
+            return
+
+        # Recursive case: try each route in current segment
+        for route in segment_routes[current_index]:
+            # Validate timing continuity
+            prev_journey = current_combination[-1]
+            if self._is_timing_valid(prev_journey, route):
+                self._combine_recursive(
+                    segment_routes,
+                    current_index + 1,
+                    current_combination + [route],
+                    origin_station,
+                    dest_station,
+                    result
+                )
+
+    def _is_timing_valid(self, journey1: Journey, journey2: Journey) -> bool:
+        """
+        Check if journey2 can follow journey1 with valid timing.
+
+        Journey1 must arrive at the connecting station before journey2 departs,
+        with at least minimum transfer time.
+
+        Note: This handles day wrapping - if arrival is Day 2 and departure is Day 1,
+        we adjust departure to the next occurrence (Day 2 or later).
+        """
+        if not journey1.segments or not journey2.segments:
+            return False
+
+        # Get last segment of journey1 (arrival at via station)
+        last_seg = journey1.segments[-1]
+        if last_seg['type'] != 'travel':
+            return False
+
+        # Get first segment of journey2 (departure from via station)
+        first_seg = journey2.segments[0]
+        if first_seg['type'] != 'travel':
+            return False
+
+        # Check if stations match
+        if last_seg['to_station'] != first_seg['from_station']:
+            return False
+
+        # Calculate time gap
+        arrival_day = last_seg['arrival_day']
+        arrival_time = last_seg['arrival_time']
+        departure_day = first_seg['departure_day']
+        departure_time = first_seg['departure_time']
+
+        arrival_seconds = self._time_to_seconds(arrival_time) + (arrival_day - 1) * 86400
+        departure_seconds_base = self._time_to_seconds(departure_time)
+
+        # If departure day is less than arrival day, the train runs on the next occurrence
+        # We need to find when this train departs AFTER the arrival
+        if departure_day < arrival_day:
+            # Train departs on Day 1, but we arrive on Day 2+
+            # So we take the next occurrence of this train
+            departure_seconds = departure_seconds_base + (arrival_day - 1) * 86400
+        else:
+            departure_seconds = departure_seconds_base + (departure_day - 1) * 86400
+
+        # If departure is still before arrival, add another day
+        if departure_seconds < arrival_seconds:
+            departure_seconds += 86400
+
+        wait_time = departure_seconds - arrival_seconds
+
+        # Must have at least minimum transfer time (10 minutes)
+        MINIMUM_TRANSFER_TIME = 600
+        MAX_TRANSFER_TIME = 24 * 3600  # Extended to 24 hours for via stations
+
+        is_valid = MINIMUM_TRANSFER_TIME <= wait_time <= MAX_TRANSFER_TIME
+
+        if not is_valid:
+            print(f"  Timing invalid: arrive {arrival_time} (day {arrival_day}) → depart {departure_time} (day {departure_day}), wait {wait_time}s")
+
+        return is_valid
+
+    def _time_to_seconds(self, time_str: str) -> int:
+        """Convert HH:MM:SS to seconds since midnight."""
+        if not time_str or time_str == "None":
+            return 0
+        parts = time_str.split(':')
+        return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+
+    def _merge_journey_segments(
+        self,
+        journeys: List[Journey],
+        origin_station: str,
+        dest_station: str
+    ) -> Optional[Journey]:
+        """
+        Merge multiple journey segments into one complete journey.
+        """
+        if not journeys:
+            return None
+
+        # Collect all segments
+        merged_segments = []
+        total_duration = 0
+        total_waiting = 0
+        num_transfers = 0
+        all_trains = []
+        all_stations = []
+        all_transfer_stations = []
+
+        for i, journey in enumerate(journeys):
+            # Add all segments from this journey
+            for seg in journey.segments:
+                merged_segments.append(seg)
+
+                if seg['type'] == 'travel':
+                    # Track stations
+                    if seg['from_station'] not in all_stations:
+                        all_stations.append(seg['from_station'])
+                    if seg['to_station'] not in all_stations:
+                        all_stations.append(seg['to_station'])
+
+                    # Track trains
+                    if seg['train_number'] not in all_trains:
+                        all_trains.append(seg['train_number'])
+
+                elif seg['type'] == 'transfer':
+                    total_waiting += seg['waiting_time_sec']
+                    num_transfers += 1
+                    if seg['station'] not in all_transfer_stations:
+                        all_transfer_stations.append(seg['station'])
+
+            # Add transfer between segments (except for last journey)
+            if i < len(journeys) - 1:
+                next_journey = journeys[i + 1]
+
+                # Calculate wait time between segments
+                last_seg = journey.segments[-1]
+                first_seg_next = next_journey.segments[0]
+
+                if last_seg['type'] == 'travel' and first_seg_next['type'] == 'travel':
+                    arrival_seconds = self._time_to_seconds(last_seg['arrival_time']) + (last_seg['arrival_day'] - 1) * 86400
+                    departure_seconds_base = self._time_to_seconds(first_seg_next['departure_time'])
+
+                    # Adjust departure day if needed
+                    if first_seg_next['departure_day'] < last_seg['arrival_day']:
+                        departure_seconds = departure_seconds_base + (last_seg['arrival_day'] - 1) * 86400
+                    else:
+                        departure_seconds = departure_seconds_base + (first_seg_next['departure_day'] - 1) * 86400
+
+                    # If still before arrival, add a day
+                    if departure_seconds < arrival_seconds:
+                        departure_seconds += 86400
+
+                    via_wait = departure_seconds - arrival_seconds
+
+                    # Adjust the day number in the next segment for display
+                    actual_departure_day = (departure_seconds // 86400) + 1
+                    # Update all segments in next journey with adjusted days
+                    day_offset = actual_departure_day - first_seg_next['departure_day']
+                    if day_offset > 0:
+                        for seg in next_journey.segments:
+                            if seg['type'] == 'travel':
+                                seg['departure_day'] += day_offset
+                                seg['arrival_day'] += day_offset
+
+                    # Add via station transfer
+                    via_station = last_seg['to_station']
+                    merged_segments.append({
+                        'type': 'transfer',
+                        'station': via_station,
+                        'station_name': self._get_station_name(via_station),
+                        'waiting_time_sec': via_wait,
+                        'waiting_time_min': via_wait // 60,
+                    })
+
+                    total_waiting += via_wait
+                    num_transfers += 1
+                    if via_station not in all_transfer_stations:
+                        all_transfer_stations.append(via_station)
+
+        # Calculate total duration
+        if merged_segments:
+            first_travel = next((s for s in merged_segments if s['type'] == 'travel'), None)
+            last_travel = next((s for s in reversed(merged_segments) if s['type'] == 'travel'), None)
+
+            if first_travel and last_travel:
+                start_seconds = self._time_to_seconds(first_travel['departure_time']) + (first_travel['departure_day'] - 1) * 86400
+                end_seconds = self._time_to_seconds(last_travel['arrival_time']) + (last_travel['arrival_day'] - 1) * 86400
+                total_duration = end_seconds - start_seconds
+
+        # Calculate combined score
+        score, score_breakdown = self._calculate_route_score(
+            total_duration,
+            total_waiting,
+            num_transfers,
+            all_transfer_stations
+        )
+
+        return Journey(
+            segments=merged_segments,
+            total_duration=total_duration,
+            total_waiting=total_waiting,
+            num_transfers=num_transfers,
+            stations_visited=all_stations,
+            trains_used=all_trains,
+            transfer_stations=all_transfer_stations,
+            score=score,
+            score_breakdown=score_breakdown
+        )
+
     def _find_k_shortest_paths_with_loops_prevented(
         self,
         origin_nodes: List[str],
