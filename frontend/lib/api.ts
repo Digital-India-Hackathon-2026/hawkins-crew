@@ -14,6 +14,13 @@ export const api = axios.create({
   },
 });
 
+// Separate client for long-running AI calls (n8n/Bedrock can take 30-60 s)
+const aiApi = axios.create({
+  baseURL: API_BASE,
+  timeout: 90000,
+  headers: { "Content-Type": "application/json" },
+});
+
 const adminApi = axios.create({
   baseURL: "/api",
   timeout: 30000,
@@ -48,6 +55,13 @@ export interface TransferSegment {
 
 export type Segment = TrainSegment | TransferSegment;
 
+export interface DelayRisk {
+  riskScore: number | null;
+  description: string;
+  recommendation: string;
+  available: boolean;
+}
+
 export interface Route {
   rank: number;
   segments: Segment[];
@@ -62,6 +76,7 @@ export interface Route {
     waiting_time: number;
     centrality_bonus: number;
   };
+  delayRisk?: DelayRisk;
 }
 
 export interface RouteResponse {
@@ -69,6 +84,7 @@ export interface RouteResponse {
   from: string;
   to: string;
   date: string;
+  viaStations?: string[] | null;
   routes?: Route[];
   message?: string;
 }
@@ -112,10 +128,39 @@ export interface TrainStop {
 export async function findRoutes(
   from: string,
   to: string,
-  date: string
+  date: string,
+  viaStations?: string[]
 ): Promise<RouteResponse> {
-  const res = await api.post<RouteResponse>("/route", { from, to, date });
+  const payload: { from: string; to: string; date: string; viaStations?: string[] } = {
+    from,
+    to,
+    date,
+  };
+  if (viaStations && viaStations.length > 0) {
+    payload.viaStations = viaStations;
+  }
+  const res = await api.post<RouteResponse>("/route", payload);
   return res.data;
+}
+
+/** Lazily fetch AI delay risk for a single route. */
+export async function fetchDelayRisk(
+  from: string,
+  to: string,
+  date: string,
+  route: Route
+): Promise<DelayRisk> {
+  try {
+    const res = await aiApi.post<DelayRisk>("/delay-risk", { from, to, date, route });
+    return res.data;
+  } catch {
+    return {
+      riskScore: null,
+      description: "Delay analysis unavailable.",
+      recommendation: "Check live train status before departure.",
+      available: false,
+    };
+  }
 }
 
 export async function getAllStations(): Promise<Station[]> {

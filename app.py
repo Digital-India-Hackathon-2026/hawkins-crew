@@ -4,6 +4,9 @@ Web server for railway routes with persistent in-memory graph.
 Graph loads once on startup, stays in memory for fast queries.
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
@@ -15,12 +18,25 @@ import requests as http_requests
 from advanced_route_finder import AdvancedRouteFinder
 from mongodb import connect_to_mongodb, disconnect_from_mongodb
 from optimization import select_optimal_route, load_optimizer_config, optimize_schedule, load_timetable_config
+from n8n_service import enrich_routes_with_delay_risk
 
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
 app.json.compact = False
-CORS(app)
+
+# ─── CORS ─────────────────────────────────────────────────────────────────────
+# In production set ALLOWED_ORIGINS to a comma-separated list of allowed origins.
+# Example: ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+# Leave unset (or set to "*") during local development for convenience.
+_raw_origins = os.environ.get("ALLOWED_ORIGINS", "*")
+_allowed_origins = (
+    [o.strip() for o in _raw_origins.split(",") if o.strip()]
+    if _raw_origins != "*"
+    else "*"
+)
+CORS(app, origins=_allowed_origins, supports_credentials=False)
+
 
 # Global route finder - loaded once on startup
 finder = None
@@ -35,6 +51,26 @@ TIMETABLE_CONFIG = None
 STATIONS_LIST = []   # [{code, name, state, zone, lat, lng}]
 TRAINS_MAP = {}      # {number -> train_info}
 SCHEDULES_MAP = {}   # {train_number -> [stops]}
+
+
+def format_score_breakdown(breakdown: dict) -> dict:
+    """Convert score breakdown from seconds to user-friendly format."""
+    formatted = {}
+    for key, value in breakdown.items():
+        if key == 'travel_time':
+            hours = int(value // 3600)
+            mins = int((value % 3600) // 60)
+            formatted['Time on Trains'] = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
+        elif key == 'waiting_time':
+            hours = int(value // 3600)
+            mins = int((value % 3600) // 60)
+            formatted['Waiting at Stations'] = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
+        elif key == 'transfer_penalty':
+            transfers = int(value / 3600) if value > 0 else 0
+            formatted['Transfer Changes'] = f"{transfers} changes"
+        elif key == 'centrality_bonus':
+            formatted['Route Directness'] = "Direct" if value == 0 else f"{value:.0f} penalty"
+    return formatted
 
 
 def load_static_data():
@@ -212,7 +248,7 @@ def info():
 
 @app.route("/route", methods=["POST"])
 def get_route():
-    """Find route between stations."""
+    """Find route between stations. Returns routes immediately without delay risk."""
 
     if finder is None:
         return jsonify({"error": "Graph not ready"}), 503
@@ -222,6 +258,7 @@ def get_route():
         from_station = data.get("from", "").upper()
         to_station = data.get("to", "").upper()
         date_str = data.get("date")  # "2026-07-13"
+        via_stations = data.get("viaStations", [])  # Optional list of via station codes
 
         if not from_station or not to_station or not date_str:
             return jsonify({"error": "Missing from, to, or date"}), 400
@@ -229,8 +266,28 @@ def get_route():
         # Parse date
         travel_date = datetime.strptime(date_str, "%Y-%m-%d")
 
-        # Find routes (generates and ranks candidate routes)
-        routes = finder.find_routes(from_station, to_station, travel_date, max_routes=5)
+        # Normalize via stations to uppercase
+        via_stations = [v.upper() for v in via_stations if v]
+
+        # Validate via stations
+        if via_stations:
+            all_stations = [from_station] + via_stations + [to_station]
+            if len(all_stations) != len(set(all_stations)):
+                return jsonify({"error": "Duplicate stations in route (source, via, or destination)"}), 400
+
+            # Check if via station equals source or destination
+            if from_station in via_stations:
+                return jsonify({"error": "Via station cannot be the same as source"}), 400
+            if to_station in via_stations:
+                return jsonify({"error": "Via station cannot be the same as destination"}), 400
+
+        # Find routes (with or without via stations)
+        if via_stations:
+            routes = finder.find_routes_with_via_stations(
+                from_station, to_station, via_stations, travel_date, max_routes=5
+            )
+        else:
+            routes = finder.find_routes(from_station, to_station, travel_date, max_routes=5)
 
         if routes:
             # Convert Journey objects to dicts for processing
@@ -244,7 +301,7 @@ def get_route():
                     "trains_used": route.trains_used,
                     "stations_visited": route.stations_visited,
                     "score": route.score,
-                    "score_breakdown": route.score_breakdown
+                    "score_breakdown": format_score_breakdown(route.score_breakdown)
                 }
                 for i, route in enumerate(routes)
             ]
@@ -269,21 +326,75 @@ def get_route():
                 "from": from_station,
                 "to": to_station,
                 "date": date_str,
+                "viaStations": via_stations if via_stations else None,
                 "routes": candidate_routes,
                 "optimal_route": optimal_route,
                 "optimizer_metadata": opt_metadata
             })
         else:
+            via_msg = f" via {' → '.join(via_stations)}" if via_stations else ""
             return jsonify({
                 "status": "not_found",
                 "from": from_station,
                 "to": to_station,
                 "date": date_str,
-                "message": f"No route from {from_station} to {to_station} on {date_str}"
+                "viaStations": via_stations if via_stations else None,
+                "message": f"No route from {from_station}{via_msg} to {to_station} on {date_str}"
             }), 404
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+@app.route("/delay-risk", methods=["POST"])
+def get_delay_risk():
+    """
+    Fetch AI-powered delay risk for a single route via n8n.
+    Called lazily by the frontend after routes are already displayed.
+
+    Request body:
+        {
+            "from": "SRC",
+            "to": "HWH",
+            "date": "2026-07-15",
+            "route": { ...single route object... }
+        }
+
+    Response:
+        { "riskScore": 67, "description": "...", "recommendation": "...", "available": true }
+    """
+    try:
+        body = request.json or {}
+        route = body.get("route")
+        if not route:
+            return jsonify({"error": "Missing route in request body"}), 400
+
+        route_response = {
+            "from": body.get("from", ""),
+            "to": body.get("to", ""),
+            "date": body.get("date", ""),
+            "status": "found",
+            "routes": [route],
+        }
+
+        from n8n_service import enrich_routes_with_delay_risk
+        enriched = enrich_routes_with_delay_risk(route_response)
+        risk = enriched["routes"][0].get("delayRisk", {
+            "riskScore": None,
+            "description": "Delay analysis unavailable.",
+            "recommendation": "Check live train status before departure.",
+            "available": False,
+        })
+        return jsonify(risk)
+
+    except Exception as e:
+        print(f"[delay-risk] Error: {e}")
+        return jsonify({
+            "riskScore": None,
+            "description": "Delay analysis unavailable.",
+            "recommendation": "Check live train status before departure.",
+            "available": False,
+        })
 
 
 # ─── Stations ─────────────────────────────────────────────────────────────────
@@ -1427,6 +1538,7 @@ if __name__ == "__main__":
     print("\nServer starting on http://localhost:5000")
     print("Endpoints:")
     print("  POST /route                         - Find multi-train route")
+    print("  POST /delay-risk                    - AI delay risk (lazy, per route)")
     print("  GET  /health                        - Health check")
     print("  GET  /info                          - Graph info")
     print("  GET  /stations                      - Search stations")
@@ -1435,14 +1547,13 @@ if __name__ == "__main__":
     print("  GET  /trains/search                 - Search trains")
     print("  GET  /trains/<number>               - Train info + schedule")
     print("  GET  /trains/<number>/live          - Live train tracking")
-    print("  GET  /admin/dashboard-metrics       - Dashboard metrics")
-    print("  GET  /admin/transfer-analytics      - Transfer analytics")
-    print("  GET  /admin/station-details/<code>  - Station details")
-    print("  POST /admin/optimize-timetable      - Timetable optimizer")
     print("  GET  /trains/<number>/history       - Train history")
     print("  GET  /fare                          - Fare lookup")
     print("  GET  /pnr/<pnr>                     - PNR status check")
     print("  GET  /availability                  - Seat availability")
+    print("  GET  /admin/dashboard-metrics       - Dashboard metrics")
+    print("  GET  /admin/transfer-analytics      - Transfer analytics")
+    print("  GET  /admin/station-details/<code>  - Station details")
     print("  POST /admin/optimize-timetable      - Optimize junction timetable")
     print("=" * 60)
 

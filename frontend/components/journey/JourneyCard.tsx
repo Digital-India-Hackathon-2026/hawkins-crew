@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Train,
@@ -13,14 +13,17 @@ import {
   MapPin,
   Award,
   RefreshCw,
+  Brain,
 } from "lucide-react";
-import { Route, formatDuration, formatTime } from "@/lib/api";
+import { Route, DelayRisk, fetchDelayRisk, formatDuration, formatTime } from "@/lib/api";
 import { JourneyTimeline } from "./JourneyTimeline";
+import { DelayRiskBadge } from "./DelayRiskBadge";
 
 interface JourneyCardProps {
   route: Route;
   fromStation: string;
   toStation: string;
+  date: string;
 }
 
 const rankColors = [
@@ -31,8 +34,28 @@ const rankColors = [
   "var(--text-muted)",
 ];
 
-export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps) {
+export function JourneyCard({ route, fromStation, toStation, date }: JourneyCardProps) {
   const [expanded, setExpanded] = useState(route.rank === 1);
+  const [delayRisk, setDelayRisk] = useState<DelayRisk | null>(null);
+  const [isLoadingRisk, setIsLoadingRisk] = useState(false);
+  const hasFetched = useRef(false);
+
+  // Lazy-fetch delay risk the first time the card is expanded
+  useEffect(() => {
+    if (!expanded || hasFetched.current) return;
+    hasFetched.current = true;
+    setIsLoadingRisk(true);
+    fetchDelayRisk(fromStation, toStation, date, route)
+      .then((risk) => setDelayRisk(risk))
+      .catch(() => setDelayRisk({
+        riskScore: null,
+        description: "Delay analysis unavailable.",
+        recommendation: "Check live train status before departure.",
+        available: false,
+      }))
+      .finally(() => setIsLoadingRisk(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded]);
 
   const firstTravel = route.segments.find((s) => s.type === "travel") as any;
   const lastTravel = [...route.segments].reverse().find((s) => s.type === "travel") as any;
@@ -348,20 +371,17 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
                           marginBottom: "4px",
                         }}
                       >
-                        {key.replace(/_/g, " ")}
+                        {key}
                       </div>
                       <div
                         style={{
                           fontSize: "0.95rem",
                           fontFamily: "'JetBrains Mono', monospace",
                           fontWeight: 600,
-                          color:
-                            val < 0
-                              ? "hsl(145,60%,45%)"
-                              : "#111111",
+                          color: "#111111",
                         }}
                       >
-                        {val.toFixed(0)}
+                        {typeof val === 'string' ? val : val.toFixed(0)}
                       </div>
                     </div>
                   ))}
@@ -388,6 +408,13 @@ export function JourneyCard({ route, fromStation, toStation }: JourneyCardProps)
                   </div>
                 </div>
               </div>
+
+              {/* Delay Risk Analysis — lazy loaded */}
+              {isLoadingRisk ? (
+                <DelayRiskSkeleton />
+              ) : delayRisk ? (
+                <DelayRiskBadge delayRisk={delayRisk} />
+              ) : null}
 
               {/* Trains used */}
               <div
@@ -456,6 +483,105 @@ function StatPill({
     >
       {icon}
       <span>{label}</span>
+    </div>
+  );
+}
+
+function DelayRiskSkeleton() {
+  return (
+    <div
+      style={{
+        marginTop: "1.25rem",
+        padding: "1.25rem",
+        background: "#F9FAFB",
+        borderRadius: "12px",
+        border: "1px solid #E5E7EB",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          fontSize: "0.75rem",
+          color: "#6B7280",
+          fontWeight: 600,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          marginBottom: "14px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        }}
+      >
+        <Brain size={13} color="#9CA3AF" style={{ animation: "pulse 1.5s ease-in-out infinite" }} />
+        Delay Risk Analysis
+        <span style={{ color: "#9CA3AF", fontWeight: 400, fontSize: "0.72rem", textTransform: "none", letterSpacing: 0 }}>
+          — AI analyzing…
+        </span>
+      </div>
+
+      {/* Animated shimmer bars */}
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "14px" }}>
+        {/* Score placeholder */}
+        <div
+          style={{
+            width: "56px",
+            height: "52px",
+            borderRadius: "8px",
+            background: "linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%)",
+            backgroundSize: "200% 100%",
+            animation: "shimmer 1.4s ease-in-out infinite",
+          }}
+        />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div
+            style={{
+              height: "20px",
+              borderRadius: "100px",
+              width: "120px",
+              background: "linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmer 1.4s ease-in-out infinite",
+            }}
+          />
+          <div
+            style={{
+              height: "6px",
+              borderRadius: "999px",
+              background: "linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmer 1.4s ease-in-out infinite",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Text placeholder lines */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        {["90%", "70%", "55%"].map((w, i) => (
+          <div
+            key={i}
+            style={{
+              height: "12px",
+              borderRadius: "6px",
+              width: w,
+              background: "linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%)",
+              backgroundSize: "200% 100%",
+              animation: `shimmer 1.4s ease-in-out infinite ${i * 0.15}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+      `}</style>
     </div>
   );
 }

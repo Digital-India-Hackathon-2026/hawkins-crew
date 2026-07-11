@@ -19,21 +19,23 @@ export default function HomePage() {
     from: string;
     to: string;
     date: string;
+    viaStations?: string[];
   } | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const { stations } = useStations();
 
-  const handleSearch = async (from: string, to: string, date: string) => {
+  const handleSearch = async (from: string, to: string, date: string, viaStations?: string[]) => {
     setIsLoading(true);
     setError(null);
     setSearched(false);
+    setRoutes([]);
 
     try {
-      const result = await findRoutes(from, to, date);
+      const result = await findRoutes(from, to, date, viaStations);
       console.log("🚂 Route search result:", JSON.stringify(result, null, 2));
       setRoutes(result.routes || []);
       setSelectedRouteIndex(0); // Select first route by default
-      setLastSearch({ from, to, date });
+      setLastSearch({ from, to, date, viaStations });
       setSearched(true);
 
       // Fire and forget log saving
@@ -75,7 +77,7 @@ export default function HomePage() {
       if (err?.response?.status === 404) {
         setRoutes([]);
         setSelectedRouteIndex(0);
-        setLastSearch({ from, to, date });
+        setLastSearch({ from, to, date, viaStations });
         setSearched(true);
         setTimeout(() => {
           resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -332,7 +334,13 @@ export default function HomePage() {
                 </div>
                 {lastSearch && (
                   <p style={{ fontSize: "0.9rem", color: "#6B7280" }}>
-                    {lastSearch.from} → {lastSearch.to} · {lastSearch.date}
+                    {lastSearch.from}
+                    {lastSearch.viaStations && lastSearch.viaStations.length > 0 && (
+                      <span style={{ color: "#6366F1", fontWeight: 600 }}>
+                        {" "}→ {lastSearch.viaStations.join(" → ")}
+                      </span>
+                    )}
+                    {" "}→ {lastSearch.to} · {lastSearch.date}
                     {routes.length > 0 && " · Ranked by optimal score"}
                   </p>
                 )}
@@ -446,6 +454,7 @@ export default function HomePage() {
                           route={route}
                           fromStation={lastSearch?.from || ""}
                           toStation={lastSearch?.to || ""}
+                          date={lastSearch?.date || ""}
                         />
                       </div>
                     ))}
