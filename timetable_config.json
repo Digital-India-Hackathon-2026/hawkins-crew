@@ -1,0 +1,9 @@
+{
+  "minHaltTimeSeconds": 120,
+  "minHeadwaySeconds": 300,
+  "scheduleModificationPenalty": 5,
+  "transferSuccessWeight": 2000,
+  "maxShiftWindowMinutes": 10,
+  "minTransferTimeSeconds": 180,
+  "maxTransferTimeSeconds": 3600
+}

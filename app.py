@@ -17,6 +17,7 @@ import requests as http_requests
 
 from advanced_route_finder import AdvancedRouteFinder
 from mongodb import connect_to_mongodb, disconnect_from_mongodb
+from optimization import select_optimal_route, load_optimizer_config, optimize_schedule, load_timetable_config
 from n8n_service import enrich_routes_with_delay_risk
 
 
@@ -41,6 +42,10 @@ CORS(app, origins=_allowed_origins, supports_credentials=False)
 finder = None
 GRAPH_LOADING = False
 ERROR_MSG = None
+
+# Optimizer configs - loaded once on startup
+OPTIMIZER_CONFIG = None
+TIMETABLE_CONFIG = None
 
 # In-memory data stores (loaded once on startup)
 STATIONS_LIST = []   # [{code, name, state, zone, lat, lng}]
@@ -174,12 +179,22 @@ def load_static_data():
 
 def load_graph():
     """Load graph and initialize route finder in background."""
-    global finder, GRAPH_LOADING, ERROR_MSG
+    global finder, GRAPH_LOADING, ERROR_MSG, OPTIMIZER_CONFIG, TIMETABLE_CONFIG
 
     try:
         print("Loading graph...")
         finder = AdvancedRouteFinder("graph.pkl")
         print(f"Route finder initialized")
+
+        # Load optimizer configs
+        print("Loading optimizer config...")
+        OPTIMIZER_CONFIG = load_optimizer_config("optimizer_config.json")
+        print(f"Route optimizer config loaded")
+
+        print("Loading timetable optimizer config...")
+        TIMETABLE_CONFIG = load_timetable_config("timetable_config.json")
+        print(f"Timetable optimizer config loaded")
+
         GRAPH_LOADING = False
     except Exception as e:
         GRAPH_LOADING = False
@@ -275,27 +290,47 @@ def get_route():
             routes = finder.find_routes(from_station, to_station, travel_date, max_routes=5)
 
         if routes:
-            route_response = {
+            # Convert Journey objects to dicts for processing
+            candidate_routes = [
+                {
+                    "rank": i + 1,
+                    "segments": route.segments,
+                    "total_duration": route.total_duration,
+                    "total_waiting": route.total_waiting,
+                    "num_transfers": route.num_transfers,
+                    "trains_used": route.trains_used,
+                    "stations_visited": route.stations_visited,
+                    "score": route.score,
+                    "score_breakdown": format_score_breakdown(route.score_breakdown)
+                }
+                for i, route in enumerate(routes)
+            ]
+
+            # ─── CP-SAT Optimizer Stage ───
+            # POST-PROCESSING: Select optimal route from candidates using
+            # configurable weighted objectives and hard constraints.
+            # This does NOT re-rank — it makes a final selection decision.
+            #
+            # Future: After n8n delay analysis enrichment adds delayRisk and
+            # reliabilityScore fields to each route, the optimizer will use
+            # those values. Currently uses defaults from config.
+            optimal_route, opt_metadata = select_optimal_route(
+                candidate_routes,
+                OPTIMIZER_CONFIG
+            )
+
+            # Return all candidate routes (for frontend display) plus the
+            # optimizer's selected route and metadata (for logging/debugging)
+            return jsonify({
                 "status": "found",
                 "from": from_station,
                 "to": to_station,
                 "date": date_str,
                 "viaStations": via_stations if via_stations else None,
-                "routes": [
-                    {
-                        "rank": i + 1,
-                        "segments": route.segments,
-                        "total_duration": route.total_duration,
-                        "total_waiting": route.total_waiting,
-                        "num_transfers": route.num_transfers,
-                        "trains_used": route.trains_used,
-                        "score": route.score,
-                        "score_breakdown": format_score_breakdown(route.score_breakdown)
-                    }
-                    for i, route in enumerate(routes)
-                ]
-            }
-            return jsonify(route_response)
+                "routes": candidate_routes,
+                "optimal_route": optimal_route,
+                "optimizer_metadata": opt_metadata
+            })
         else:
             via_msg = f" via {' → '.join(via_stations)}" if via_stations else ""
             return jsonify({
@@ -1020,6 +1055,469 @@ def train_history(number: str):
     })
 
 
+# ─── Admin: Timetable Optimizer ──────────────────────────────────────────────
+
+@app.route("/admin/trains-at-station/<station_code>", methods=["GET"])
+def get_trains_at_station(station_code):
+    """
+    Get list of trains that stop at a given station (for debugging/testing).
+
+    Response: { "station": str, "trains": [{"number": str, "name": str}], "count": int }
+    """
+    trains_at_station = []
+
+    for train_num, schedule in SCHEDULES_MAP.items():
+        for stop in schedule:
+            if stop.get("station_code") == station_code:
+                train_info = TRAINS_MAP.get(train_num, {})
+                trains_at_station.append({
+                    "number": train_num,
+                    "name": train_info.get("name", train_num),
+                    "arrival": stop.get("arrival"),
+                    "departure": stop.get("departure")
+                })
+                break
+
+    return jsonify({
+        "station": station_code,
+        "trains": trains_at_station[:50],  # Limit to first 50
+        "count": len(trains_at_station)
+    })
+
+
+@app.route("/admin/optimize-timetable", methods=["POST"])
+def optimize_timetable():
+    """
+    Optimize train departure times at a junction station to maximize transfers.
+
+    Request body:
+    {
+        "stationCode": str,
+        "trainNumbers": [str],
+        "maxShiftMinutes": int (optional, default from config)
+    }
+
+    Response: OptimizerResult matching frontend interface
+    """
+    if TIMETABLE_CONFIG is None:
+        return jsonify({"error": "Timetable optimizer config not loaded"}), 500
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body required"}), 400
+
+    station_code = data.get("stationCode")
+    train_numbers = data.get("trainNumbers", [])
+    max_shift_minutes = data.get("maxShiftMinutes")
+
+    if not station_code:
+        return jsonify({"error": "stationCode is required"}), 400
+    if not train_numbers or len(train_numbers) == 0:
+        return jsonify({"error": "trainNumbers array is required"}), 400
+
+    print(f"[Optimizer] Station: {station_code}, Trains: {train_numbers}")
+
+    # Build train data from SCHEDULES_MAP
+    trains = []
+    trains_not_in_map = []
+    trains_no_stop = []
+
+    for train_num in train_numbers:
+        if train_num not in SCHEDULES_MAP:
+            trains_not_in_map.append(train_num)
+            continue
+
+        schedule = SCHEDULES_MAP[train_num]
+        train_info = TRAINS_MAP.get(train_num, {})
+
+        # Find the stop at junction station
+        junction_stop = None
+        for stop in schedule:
+            if stop.get("station_code") == station_code:
+                junction_stop = stop
+                break
+
+        if not junction_stop:
+            trains_no_stop.append(train_num)
+            continue  # Train doesn't stop at this station
+
+        trains.append({
+            "trainNumber": train_num,
+            "trainName": train_info.get("name", train_num),
+            "currentDeparture": junction_stop.get("departure", "00:00"),
+            "currentArrival": junction_stop.get("arrival", "00:00"),
+            "platform": None,  # Platform info not in data
+            "route": [s.get("station_code") for s in schedule],
+            "stopsAt": [
+                {
+                    "stationCode": s.get("station_code"),
+                    "arrivalTime": s.get("arrival"),
+                    "departureTime": s.get("departure")
+                }
+                for s in schedule
+            ]
+        })
+
+    if len(trains) == 0:
+        error_details = []
+        if trains_not_in_map:
+            error_details.append(f"Trains not found in schedules: {', '.join(trains_not_in_map)}")
+        if trains_no_stop:
+            error_details.append(f"Trains don't stop at {station_code}: {', '.join(trains_no_stop)}")
+
+        return jsonify({
+            "error": "insufficient_data",
+            "message": "None of the selected trains stop at this station or schedules not found.",
+            "details": " | ".join(error_details) if error_details else "Unknown reason"
+        }), 400
+
+    # Query MongoDB SearchLog for transfer pairs
+    # This is a simplified version - in production, query actual SearchLog collection
+    try:
+        from mongodb import get_database
+        db = get_database()
+
+        # Find searches with transfers at this station involving these trains
+        transfer_pairs_map = {}
+
+        searches = db.searchLogs.find({
+            "transfers": {
+                "$elemMatch": {
+                    "station": station_code
+                }
+            }
+        }).limit(1000)
+
+        for search in searches:
+            transfers = search.get("transfers", [])
+            for transfer in transfers:
+                if transfer.get("station") != station_code:
+                    continue
+
+                from_train = transfer.get("fromTrain", "")
+                to_train = transfer.get("toTrain", "")
+
+                if from_train in train_numbers and to_train in train_numbers:
+                    pair_key = f"{from_train}→{to_train}"
+                    if pair_key not in transfer_pairs_map:
+                        transfer_pairs_map[pair_key] = {
+                            "fromTrain": from_train,
+                            "toTrain": to_train,
+                            "passengerCount": 0
+                        }
+                    transfer_pairs_map[pair_key]["passengerCount"] += 1
+
+        transfer_pairs = list(transfer_pairs_map.values())
+
+        # If no transfer pairs found, generate synthetic ones for testing
+        if len(transfer_pairs) == 0:
+            print(f"[Optimizer] No SearchLog data found, generating synthetic transfer pairs")
+            for i, from_train in enumerate(train_numbers):
+                for to_train in train_numbers[i+1:]:
+                    transfer_pairs.append({
+                        "fromTrain": from_train,
+                        "toTrain": to_train,
+                        "passengerCount": 10  # Default
+                    })
+
+    except Exception as e:
+        print(f"[Optimizer] MongoDB query failed: {e}")
+        # Fallback: generate synthetic transfer pairs for all combinations
+        transfer_pairs = []
+        for i, from_train in enumerate(train_numbers):
+            for to_train in train_numbers[i+1:]:
+                transfer_pairs.append({
+                    "fromTrain": from_train,
+                    "toTrain": to_train,
+                    "passengerCount": 10  # Default
+                })
+
+    # Call timetable optimizer
+    try:
+        result, metadata = optimize_schedule(
+            trains,
+            transfer_pairs,
+            station_code,
+            TIMETABLE_CONFIG,
+            max_shift_minutes
+        )
+    except Exception as e:
+        return jsonify({"error": f"Optimization failed: {str(e)}"}), 500
+
+    # Compute before/after metrics
+    total_transfers = len(result["transferPairs"])
+    successful_before = sum(1 for tp in result["transferPairs"] if tp["successBefore"])
+    successful_after = sum(1 for tp in result["transferPairs"] if tp["successAfter"])
+    problematic_before = total_transfers - successful_before
+    problematic_after = total_transfers - successful_after
+
+    success_rate_before = int((successful_before / total_transfers * 100) if total_transfers > 0 else 0)
+    success_rate_after = int((successful_after / total_transfers * 100) if total_transfers > 0 else 0)
+
+    # Format recommended changes
+    recommended_changes = []
+    for train in result["trains"]:
+        if not train["changed"]:
+            continue
+
+        # Count impacted connections
+        impacted = sum(
+            1 for tp in result["transferPairs"]
+            if tp["fromTrain"] == train["trainNumber"] or tp["toTrain"] == train["trainNumber"]
+        )
+
+        # Compute improvement score (transfers made feasible)
+        improvement = sum(
+            1 for tp in result["transferPairs"]
+            if (tp["fromTrain"] == train["trainNumber"] or tp["toTrain"] == train["trainNumber"])
+            and tp["successAfter"] and not tp["successBefore"]
+        )
+
+        recommended_changes.append({
+            "trainNumber": train["trainNumber"],
+            "trainName": train["trainName"],
+            "currentDeparture": train["originalDeparture"],
+            "recommendedDeparture": train["optimizedDeparture"],
+            "shiftMinutes": train["shiftMinutes"],
+            "reason": f"Improves {improvement} transfer(s)" if improvement > 0 else "Maintains optimal timing",
+            "impactedConnections": impacted,
+            "improvementScore": improvement * 10,
+            "route": train["route"],
+            "stopsAt": train["stopsAt"]
+        })
+
+    # Build response
+    response = {
+        "stationCode": station_code,
+        "maxShiftMinutes": max_shift_minutes or TIMETABLE_CONFIG["maxShiftWindowMinutes"],
+        "before": {
+            "avgWaitingTime": 300,  # Placeholder - would compute from actual data
+            "successRate": success_rate_before,
+            "totalTransfers": total_transfers,
+            "problematicConnections": problematic_before
+        },
+        "after": {
+            "avgWaitingTime": 280,  # Placeholder
+            "successRate": success_rate_after,
+            "totalTransfers": total_transfers,
+            "problematicConnections": problematic_after
+        },
+        "recommendedChanges": recommended_changes,
+        "optimizerMetadata": metadata,
+        "recommendations": []  # Placeholder for compatibility
+    }
+
+    return jsonify(response)
+
+
+@app.route("/admin/dashboard-metrics", methods=["GET"])
+def get_dashboard_metrics():
+    """
+    Get dashboard metrics with realistic demo data.
+    In production, this would query MongoDB searchLogs collection.
+    """
+    # Demo data simulating 30 days of journey planning activity
+    demo_metrics = {
+        "totalSearches": 15847,
+        "totalTransfers": 8923,
+        "successfulTransfers": 6842,
+        "failedTransfers": 2081,
+        "successRate": 77,  # 6842/8923 * 100
+        "avgWaitingTime": 32  # Average waiting time in minutes
+    }
+
+    return jsonify(demo_metrics)
+
+
+@app.route("/admin/transfer-analytics", methods=["GET"])
+def get_transfer_analytics():
+    """
+    Get transfer analytics with realistic demo data.
+    Shows station performance and problematic train pairs.
+    """
+    # Demo data for major junction stations
+    station_data = [
+        # High-performing stations
+        {"station": "NDLS", "successRate": 85.2, "total": 1245, "successful": 1061, "failed": 184, "avgWaitTime": 28},
+        {"station": "BCT", "successRate": 82.7, "total": 987, "successful": 816, "failed": 171, "avgWaitTime": 31},
+        {"station": "HWH", "successRate": 81.4, "total": 1098, "successful": 894, "failed": 204, "avgWaitTime": 29},
+        {"station": "CSMT", "successRate": 79.3, "total": 876, "successful": 695, "failed": 181, "avgWaitTime": 33},
+        {"station": "MAS", "successRate": 78.1, "total": 743, "successful": 580, "failed": 163, "avgWaitTime": 35},
+
+        # Medium-performing stations
+        {"station": "SBC", "successRate": 74.5, "total": 654, "successful": 487, "failed": 167, "avgWaitTime": 38},
+        {"station": "PUNE", "successRate": 72.8, "total": 589, "successful": 429, "failed": 160, "avgWaitTime": 36},
+        {"station": "JP", "successRate": 71.2, "total": 512, "successful": 365, "failed": 147, "avgWaitTime": 42},
+        {"station": "AGC", "successRate": 69.7, "total": 478, "successful": 333, "failed": 145, "avgWaitTime": 44},
+        {"station": "BZA", "successRate": 68.3, "total": 445, "successful": 304, "failed": 141, "avgWaitTime": 46},
+
+        # Lower-performing stations (need optimization)
+        {"station": "VSKP", "successRate": 64.5, "total": 398, "successful": 257, "failed": 141, "avgWaitTime": 52},
+        {"station": "NGP", "successRate": 62.1, "total": 367, "successful": 228, "failed": 139, "avgWaitTime": 55},
+        {"station": "BPL", "successRate": 59.8, "total": 334, "successful": 200, "failed": 134, "avgWaitTime": 58},
+        {"station": "GKP", "successRate": 57.2, "total": 298, "successful": 171, "failed": 127, "avgWaitTime": 61},
+        {"station": "CNB", "successRate": 54.6, "total": 267, "successful": 146, "failed": 121, "avgWaitTime": 64}
+    ]
+
+    # Problematic train pairs that frequently have failed transfers
+    problematic_pairs = [
+        {"trainPair": "12301 → 12302", "totalAttempts": 156, "failures": 78, "successRate": 50},
+        {"trainPair": "12951 → 12952", "totalAttempts": 143, "failures": 68, "successRate": 52},
+        {"trainPair": "12429 → 12430", "totalAttempts": 128, "failures": 59, "successRate": 54},
+        {"trainPair": "12615 → 12616", "totalAttempts": 119, "failures": 52, "successRate": 56},
+        {"trainPair": "12801 → 12802", "totalAttempts": 107, "failures": 46, "successRate": 57},
+        {"trainPair": "12625 → 12626", "totalAttempts": 98, "failures": 41, "successRate": 58},
+        {"trainPair": "12259 → 12260", "totalAttempts": 89, "failures": 36, "successRate": 60},
+        {"trainPair": "12841 → 12842", "totalAttempts": 82, "failures": 32, "successRate": 61},
+        {"trainPair": "12621 → 12622", "totalAttempts": 76, "failures": 29, "successRate": 62},
+        {"trainPair": "12273 → 12274", "totalAttempts": 71, "failures": 26, "successRate": 63}
+    ]
+
+    analytics = {
+        "stationSuccessRates": station_data,
+        "problematicTrainPairs": problematic_pairs
+    }
+
+    return jsonify(analytics)
+
+
+@app.route("/admin/station-details/<code>", methods=["GET"])
+def get_station_details(code):
+    """
+    Get detailed transfer analytics for a specific station.
+    Shows transfer performance and top train pairs.
+    """
+    code = code.upper()
+
+    # Demo data for different stations
+    station_demos = {
+        "NDLS": {
+            "stationCode": "NDLS",
+            "totalTransfers": 1245,
+            "successfulTransfers": 1061,
+            "failedTransfers": 184,
+            "successRate": 85,
+            "avgWaitingTime": 28,
+            "topTrainPairs": [
+                {"trainPair": "12301 → 12429", "count": 89},
+                {"trainPair": "12951 → 12302", "count": 76},
+                {"trainPair": "12429 → 12951", "count": 68},
+                {"trainPair": "12302 → 12429", "count": 54},
+                {"trainPair": "12301 → 12951", "count": 47}
+            ]
+        },
+        "BCT": {
+            "stationCode": "BCT",
+            "totalTransfers": 987,
+            "successfulTransfers": 816,
+            "failedTransfers": 171,
+            "successRate": 83,
+            "avgWaitingTime": 31,
+            "topTrainPairs": [
+                {"trainPair": "12951 → 12952", "count": 72},
+                {"trainPair": "12953 → 12954", "count": 65},
+                {"trainPair": "12955 → 12956", "count": 58},
+                {"trainPair": "12957 → 12958", "count": 51},
+                {"trainPair": "12951 → 12953", "count": 44}
+            ]
+        },
+        "HWH": {
+            "stationCode": "HWH",
+            "totalTransfers": 1098,
+            "successfulTransfers": 894,
+            "failedTransfers": 204,
+            "successRate": 81,
+            "avgWaitingTime": 29,
+            "topTrainPairs": [
+                {"trainPair": "12301 → 12303", "count": 84},
+                {"trainPair": "12305 → 12307", "count": 71},
+                {"trainPair": "12303 → 12305", "count": 63},
+                {"trainPair": "12301 → 12305", "count": 56},
+                {"trainPair": "12307 → 12301", "count": 49}
+            ]
+        },
+        "CSMT": {
+            "stationCode": "CSMT",
+            "totalTransfers": 876,
+            "successfulTransfers": 695,
+            "failedTransfers": 181,
+            "successRate": 79,
+            "avgWaitingTime": 33,
+            "topTrainPairs": [
+                {"trainPair": "12123 → 12124", "count": 67},
+                {"trainPair": "12125 → 12126", "count": 59},
+                {"trainPair": "12127 → 12128", "count": 52},
+                {"trainPair": "12123 → 12125", "count": 46},
+                {"trainPair": "12124 → 12127", "count": 41}
+            ]
+        },
+        "MAS": {
+            "stationCode": "MAS",
+            "totalTransfers": 743,
+            "successfulTransfers": 580,
+            "failedTransfers": 163,
+            "successRate": 78,
+            "avgWaitingTime": 35,
+            "topTrainPairs": [
+                {"trainPair": "12601 → 12602", "count": 61},
+                {"trainPair": "12603 → 12604", "count": 54},
+                {"trainPair": "12605 → 12606", "count": 48},
+                {"trainPair": "12601 → 12603", "count": 42},
+                {"trainPair": "12602 → 12605", "count": 37}
+            ]
+        },
+        "SBC": {
+            "stationCode": "SBC",
+            "totalTransfers": 654,
+            "successfulTransfers": 487,
+            "failedTransfers": 167,
+            "successRate": 75,
+            "avgWaitingTime": 38,
+            "topTrainPairs": [
+                {"trainPair": "12627 → 12628", "count": 53},
+                {"trainPair": "12629 → 12630", "count": 47},
+                {"trainPair": "12631 → 12632", "count": 41},
+                {"trainPair": "12627 → 12629", "count": 36},
+                {"trainPair": "12628 → 12631", "count": 32}
+            ]
+        }
+    }
+
+    # If station code is in demos, return it
+    if code in station_demos:
+        return jsonify(station_demos[code])
+
+    # Otherwise, generate generic data for any station
+    # Randomize slightly based on station code hash for consistency
+    code_hash = sum(ord(c) for c in code)
+    base_total = 200 + (code_hash % 300)
+    base_rate = 65 + (code_hash % 20)
+
+    total = base_total
+    rate = base_rate
+    successful = int(total * rate / 100)
+    failed = total - successful
+    avg_wait = 25 + (code_hash % 35)
+
+    generic_data = {
+        "stationCode": code,
+        "totalTransfers": total,
+        "successfulTransfers": successful,
+        "failedTransfers": failed,
+        "successRate": rate,
+        "avgWaitingTime": avg_wait,
+        "topTrainPairs": [
+            {"trainPair": f"12{(code_hash % 9) + 1}01 → 12{(code_hash % 9) + 1}02", "count": 45 + (code_hash % 20)},
+            {"trainPair": f"12{(code_hash % 9) + 1}03 → 12{(code_hash % 9) + 1}04", "count": 38 + (code_hash % 15)},
+            {"trainPair": f"12{(code_hash % 9) + 1}05 → 12{(code_hash % 9) + 1}06", "count": 32 + (code_hash % 12)},
+            {"trainPair": f"12{(code_hash % 9) + 1}07 → 12{(code_hash % 9) + 1}08", "count": 27 + (code_hash % 10)},
+            {"trainPair": f"12{(code_hash % 9) + 1}09 → 12{(code_hash % 9) + 1}10", "count": 23 + (code_hash % 8)}
+        ]
+    }
+
+    return jsonify(generic_data)
+
+
 if __name__ == "__main__":
     # Load static data first
     print("Prayan Railway Route Server")
@@ -1039,20 +1537,24 @@ if __name__ == "__main__":
 
     print("\nServer starting on http://localhost:5000")
     print("Endpoints:")
-    print("  POST /route                   - Find multi-train route")
-    print("  POST /delay-risk              - AI delay risk (lazy, per route)")
-    print("  GET  /health                  - Health check")
-    print("  GET  /info                    - Graph info")
-    print("  GET  /stations                - Search stations")
-    print("  GET  /stations/all            - All stations (for frontend cache)")
-    print("  GET  /stations/<code>/board   - Station board")
-    print("  GET  /trains/search           - Search trains")
-    print("  GET  /trains/<number>         - Train info + schedule")
-    print("  GET  /trains/<number>/live    - Live train tracking")
-    print("  GET  /trains/<number>/history - Train history")
-    print("  GET  /fare                    - Fare lookup")
-    print("  GET  /pnr/<pnr>               - PNR status check")
-    print("  GET  /availability            - Seat availability")
+    print("  POST /route                         - Find multi-train route")
+    print("  POST /delay-risk                    - AI delay risk (lazy, per route)")
+    print("  GET  /health                        - Health check")
+    print("  GET  /info                          - Graph info")
+    print("  GET  /stations                      - Search stations")
+    print("  GET  /stations/all                  - All stations (for frontend cache)")
+    print("  GET  /stations/<code>/board         - Station board")
+    print("  GET  /trains/search                 - Search trains")
+    print("  GET  /trains/<number>               - Train info + schedule")
+    print("  GET  /trains/<number>/live          - Live train tracking")
+    print("  GET  /trains/<number>/history       - Train history")
+    print("  GET  /fare                          - Fare lookup")
+    print("  GET  /pnr/<pnr>                     - PNR status check")
+    print("  GET  /availability                  - Seat availability")
+    print("  GET  /admin/dashboard-metrics       - Dashboard metrics")
+    print("  GET  /admin/transfer-analytics      - Transfer analytics")
+    print("  GET  /admin/station-details/<code>  - Station details")
+    print("  POST /admin/optimize-timetable      - Optimize junction timetable")
     print("=" * 60)
 
     try:

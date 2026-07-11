@@ -142,7 +142,15 @@ export function RouteMap({ junctionStationCode, trains, mode }: RouteMapProps) {
 
         {/* Train routes */}
         {trains.map((train, idx) => {
-          const color = TRAIN_COLORS[idx % TRAIN_COLORS.length];
+          const hasChanged = train.shiftMinutes > 0;
+          const isAfterMode = mode === "after";
+
+          // Color logic: changed trains get accent color in "after" mode
+          let color = TRAIN_COLORS[idx % TRAIN_COLORS.length];
+          if (hasChanged && isAfterMode) {
+            color = "hsl(40,95%,55%)"; // Bright amber for modified routes
+          }
+
           const routeCoords = train.route
             .map((code) => {
               const station = stationMap.get(code);
@@ -152,18 +160,15 @@ export function RouteMap({ junctionStationCode, trains, mode }: RouteMapProps) {
 
           if (routeCoords.length < 2) return null;
 
-          const hasChanged = train.shiftMinutes > 0;
-          const isAfterMode = mode === "after";
-
           return (
             <Polyline
               key={`train-${train.trainNumber}-${mode}`}
               positions={routeCoords}
               pathOptions={{
                 color,
-                weight: hasChanged && isAfterMode ? 5 : 3,
-                opacity: hasChanged && isAfterMode ? 0.9 : 0.7,
-                dashArray: hasChanged && isAfterMode ? "10, 5" : undefined,
+                weight: hasChanged && isAfterMode ? 6 : 3,
+                opacity: hasChanged && isAfterMode ? 1.0 : 0.65,
+                dashArray: hasChanged && isAfterMode ? "12, 8" : undefined,
               }}
             >
               <Popup>
@@ -173,20 +178,20 @@ export function RouteMap({ junctionStationCode, trains, mode }: RouteMapProps) {
                 <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "4px" }}>
                   {train.trainName}
                 </div>
-                {hasChanged && isAfterMode && (
+                {isAfterMode && (
                   <div
                     style={{
                       marginTop: "8px",
-                      padding: "4px 8px",
-                      background: "rgba(220,100,30,0.1)",
-                      border: "1px solid rgba(220,100,30,0.2)",
+                      padding: "6px 10px",
+                      background: hasChanged ? "rgba(255,193,7,0.15)" : "rgba(76,175,80,0.15)",
+                      border: hasChanged ? "1px solid rgba(255,193,7,0.3)" : "1px solid rgba(76,175,80,0.3)",
                       borderRadius: "6px",
                       fontSize: "0.75rem",
                       fontWeight: 600,
-                      color: "hsl(25,90%,55%)",
+                      color: hasChanged ? "hsl(40,95%,45%)" : "hsl(145,60%,40%)",
                     }}
                   >
-                    Modified: +{train.shiftMinutes} min
+                    {hasChanged ? `⚡ Modified: +${train.shiftMinutes} min` : "✓ No changes needed"}
                   </div>
                 )}
               </Popup>
@@ -262,9 +267,8 @@ export function RouteMap({ junctionStationCode, trains, mode }: RouteMapProps) {
                       Trains at this station:
                     </div>
                     {trainStops.slice(0, 3).map(({ train, stop }) => {
-                      const arrival = mode === "before" ? stop.arrivalBefore : stop.arrivalAfter;
-                      const departure = mode === "before" ? stop.departureBefore : stop.departureAfter;
-                      const hasChanged = train.shiftMinutes > 0 && mode === "after";
+                      const hasChanged = train.shiftMinutes > 0;
+                      const showComparison = hasChanged && mode === "after";
 
                       return (
                         <div
@@ -272,29 +276,52 @@ export function RouteMap({ junctionStationCode, trains, mode }: RouteMapProps) {
                           style={{
                             marginBottom: "6px",
                             padding: "6px 8px",
-                            background: "var(--bg-secondary)",
+                            background: showComparison ? "rgba(255,193,7,0.08)" : "var(--bg-secondary)",
                             borderRadius: "6px",
-                            border: hasChanged ? "1px solid rgba(220,100,30,0.3)" : "1px solid var(--glass-border)",
+                            border: showComparison ? "1px solid rgba(255,193,7,0.3)" : "1px solid var(--glass-border)",
                           }}
                         >
-                          <div style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+                          <div style={{ fontSize: "0.8rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                            {showComparison && <span style={{ color: "hsl(40,95%,55%)" }}>⚡</span>}
                             {train.trainNumber}
                           </div>
-                          <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                            {arrival && `Arr: ${arrival}`}
-                            {arrival && departure && " | "}
-                            {departure && `Dep: ${departure}`}
-                          </div>
-                          {hasChanged && (
-                            <div
-                              style={{
-                                fontSize: "0.65rem",
-                                color: "hsl(25,90%,55%)",
-                                marginTop: "3px",
-                                fontWeight: 600,
-                              }}
-                            >
-                              {stop.departureBefore} → {stop.departureAfter} (+{train.shiftMinutes}m)
+
+                          {showComparison ? (
+                            // Show before → after comparison
+                            <>
+                              <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+                                <div style={{ textDecoration: "line-through", opacity: 0.6 }}>
+                                  {stop.arrivalBefore && `Arr: ${stop.arrivalBefore}`}
+                                  {stop.arrivalBefore && stop.departureBefore && " | "}
+                                  {stop.departureBefore && `Dep: ${stop.departureBefore}`}
+                                </div>
+                                <div style={{ color: "hsl(145,60%,45%)", fontWeight: 600, marginTop: "2px" }}>
+                                  {stop.arrivalAfter && `Arr: ${stop.arrivalAfter}`}
+                                  {stop.arrivalAfter && stop.departureAfter && " | "}
+                                  {stop.departureAfter && `Dep: ${stop.departureAfter}`}
+                                </div>
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.65rem",
+                                  color: "hsl(40,95%,55%)",
+                                  marginTop: "4px",
+                                  fontWeight: 600,
+                                  padding: "2px 6px",
+                                  background: "rgba(255,193,7,0.15)",
+                                  borderRadius: "4px",
+                                  display: "inline-block",
+                                }}
+                              >
+                                +{train.shiftMinutes} min shift
+                              </div>
+                            </>
+                          ) : (
+                            // Show single timing
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", marginTop: "2px" }}>
+                              {(mode === "before" ? stop.arrivalBefore : stop.arrivalAfter) && `Arr: ${mode === "before" ? stop.arrivalBefore : stop.arrivalAfter}`}
+                              {(mode === "before" ? stop.arrivalBefore : stop.arrivalAfter) && (mode === "before" ? stop.departureBefore : stop.departureAfter) && " | "}
+                              {(mode === "before" ? stop.departureBefore : stop.departureAfter) && `Dep: ${mode === "before" ? stop.departureBefore : stop.departureAfter}`}
                             </div>
                           )}
                         </div>
