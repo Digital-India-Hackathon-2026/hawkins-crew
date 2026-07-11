@@ -1199,6 +1199,214 @@ def optimize_timetable():
     return jsonify(response)
 
 
+@app.route("/admin/dashboard-metrics", methods=["GET"])
+def get_dashboard_metrics():
+    """
+    Get dashboard metrics with realistic demo data.
+    In production, this would query MongoDB searchLogs collection.
+    """
+    # Demo data simulating 30 days of journey planning activity
+    demo_metrics = {
+        "totalSearches": 15847,
+        "totalTransfers": 8923,
+        "successfulTransfers": 6842,
+        "failedTransfers": 2081,
+        "successRate": 77,  # 6842/8923 * 100
+        "avgWaitingTime": 32  # Average waiting time in minutes
+    }
+
+    return jsonify(demo_metrics)
+
+
+@app.route("/admin/transfer-analytics", methods=["GET"])
+def get_transfer_analytics():
+    """
+    Get transfer analytics with realistic demo data.
+    Shows station performance and problematic train pairs.
+    """
+    # Demo data for major junction stations
+    station_data = [
+        # High-performing stations
+        {"station": "NDLS", "successRate": 85.2, "total": 1245, "successful": 1061, "failed": 184, "avgWaitTime": 28},
+        {"station": "BCT", "successRate": 82.7, "total": 987, "successful": 816, "failed": 171, "avgWaitTime": 31},
+        {"station": "HWH", "successRate": 81.4, "total": 1098, "successful": 894, "failed": 204, "avgWaitTime": 29},
+        {"station": "CSMT", "successRate": 79.3, "total": 876, "successful": 695, "failed": 181, "avgWaitTime": 33},
+        {"station": "MAS", "successRate": 78.1, "total": 743, "successful": 580, "failed": 163, "avgWaitTime": 35},
+
+        # Medium-performing stations
+        {"station": "SBC", "successRate": 74.5, "total": 654, "successful": 487, "failed": 167, "avgWaitTime": 38},
+        {"station": "PUNE", "successRate": 72.8, "total": 589, "successful": 429, "failed": 160, "avgWaitTime": 36},
+        {"station": "JP", "successRate": 71.2, "total": 512, "successful": 365, "failed": 147, "avgWaitTime": 42},
+        {"station": "AGC", "successRate": 69.7, "total": 478, "successful": 333, "failed": 145, "avgWaitTime": 44},
+        {"station": "BZA", "successRate": 68.3, "total": 445, "successful": 304, "failed": 141, "avgWaitTime": 46},
+
+        # Lower-performing stations (need optimization)
+        {"station": "VSKP", "successRate": 64.5, "total": 398, "successful": 257, "failed": 141, "avgWaitTime": 52},
+        {"station": "NGP", "successRate": 62.1, "total": 367, "successful": 228, "failed": 139, "avgWaitTime": 55},
+        {"station": "BPL", "successRate": 59.8, "total": 334, "successful": 200, "failed": 134, "avgWaitTime": 58},
+        {"station": "GKP", "successRate": 57.2, "total": 298, "successful": 171, "failed": 127, "avgWaitTime": 61},
+        {"station": "CNB", "successRate": 54.6, "total": 267, "successful": 146, "failed": 121, "avgWaitTime": 64}
+    ]
+
+    # Problematic train pairs that frequently have failed transfers
+    problematic_pairs = [
+        {"trainPair": "12301 → 12302", "totalAttempts": 156, "failures": 78, "successRate": 50},
+        {"trainPair": "12951 → 12952", "totalAttempts": 143, "failures": 68, "successRate": 52},
+        {"trainPair": "12429 → 12430", "totalAttempts": 128, "failures": 59, "successRate": 54},
+        {"trainPair": "12615 → 12616", "totalAttempts": 119, "failures": 52, "successRate": 56},
+        {"trainPair": "12801 → 12802", "totalAttempts": 107, "failures": 46, "successRate": 57},
+        {"trainPair": "12625 → 12626", "totalAttempts": 98, "failures": 41, "successRate": 58},
+        {"trainPair": "12259 → 12260", "totalAttempts": 89, "failures": 36, "successRate": 60},
+        {"trainPair": "12841 → 12842", "totalAttempts": 82, "failures": 32, "successRate": 61},
+        {"trainPair": "12621 → 12622", "totalAttempts": 76, "failures": 29, "successRate": 62},
+        {"trainPair": "12273 → 12274", "totalAttempts": 71, "failures": 26, "successRate": 63}
+    ]
+
+    analytics = {
+        "stationSuccessRates": station_data,
+        "problematicTrainPairs": problematic_pairs
+    }
+
+    return jsonify(analytics)
+
+
+@app.route("/admin/station-details/<code>", methods=["GET"])
+def get_station_details(code):
+    """
+    Get detailed transfer analytics for a specific station.
+    Shows transfer performance and top train pairs.
+    """
+    code = code.upper()
+
+    # Demo data for different stations
+    station_demos = {
+        "NDLS": {
+            "stationCode": "NDLS",
+            "totalTransfers": 1245,
+            "successfulTransfers": 1061,
+            "failedTransfers": 184,
+            "successRate": 85,
+            "avgWaitingTime": 28,
+            "topTrainPairs": [
+                {"trainPair": "12301 → 12429", "count": 89},
+                {"trainPair": "12951 → 12302", "count": 76},
+                {"trainPair": "12429 → 12951", "count": 68},
+                {"trainPair": "12302 → 12429", "count": 54},
+                {"trainPair": "12301 → 12951", "count": 47}
+            ]
+        },
+        "BCT": {
+            "stationCode": "BCT",
+            "totalTransfers": 987,
+            "successfulTransfers": 816,
+            "failedTransfers": 171,
+            "successRate": 83,
+            "avgWaitingTime": 31,
+            "topTrainPairs": [
+                {"trainPair": "12951 → 12952", "count": 72},
+                {"trainPair": "12953 → 12954", "count": 65},
+                {"trainPair": "12955 → 12956", "count": 58},
+                {"trainPair": "12957 → 12958", "count": 51},
+                {"trainPair": "12951 → 12953", "count": 44}
+            ]
+        },
+        "HWH": {
+            "stationCode": "HWH",
+            "totalTransfers": 1098,
+            "successfulTransfers": 894,
+            "failedTransfers": 204,
+            "successRate": 81,
+            "avgWaitingTime": 29,
+            "topTrainPairs": [
+                {"trainPair": "12301 → 12303", "count": 84},
+                {"trainPair": "12305 → 12307", "count": 71},
+                {"trainPair": "12303 → 12305", "count": 63},
+                {"trainPair": "12301 → 12305", "count": 56},
+                {"trainPair": "12307 → 12301", "count": 49}
+            ]
+        },
+        "CSMT": {
+            "stationCode": "CSMT",
+            "totalTransfers": 876,
+            "successfulTransfers": 695,
+            "failedTransfers": 181,
+            "successRate": 79,
+            "avgWaitingTime": 33,
+            "topTrainPairs": [
+                {"trainPair": "12123 → 12124", "count": 67},
+                {"trainPair": "12125 → 12126", "count": 59},
+                {"trainPair": "12127 → 12128", "count": 52},
+                {"trainPair": "12123 → 12125", "count": 46},
+                {"trainPair": "12124 → 12127", "count": 41}
+            ]
+        },
+        "MAS": {
+            "stationCode": "MAS",
+            "totalTransfers": 743,
+            "successfulTransfers": 580,
+            "failedTransfers": 163,
+            "successRate": 78,
+            "avgWaitingTime": 35,
+            "topTrainPairs": [
+                {"trainPair": "12601 → 12602", "count": 61},
+                {"trainPair": "12603 → 12604", "count": 54},
+                {"trainPair": "12605 → 12606", "count": 48},
+                {"trainPair": "12601 → 12603", "count": 42},
+                {"trainPair": "12602 → 12605", "count": 37}
+            ]
+        },
+        "SBC": {
+            "stationCode": "SBC",
+            "totalTransfers": 654,
+            "successfulTransfers": 487,
+            "failedTransfers": 167,
+            "successRate": 75,
+            "avgWaitingTime": 38,
+            "topTrainPairs": [
+                {"trainPair": "12627 → 12628", "count": 53},
+                {"trainPair": "12629 → 12630", "count": 47},
+                {"trainPair": "12631 → 12632", "count": 41},
+                {"trainPair": "12627 → 12629", "count": 36},
+                {"trainPair": "12628 → 12631", "count": 32}
+            ]
+        }
+    }
+
+    # If station code is in demos, return it
+    if code in station_demos:
+        return jsonify(station_demos[code])
+
+    # Otherwise, generate generic data for any station
+    # Randomize slightly based on station code hash for consistency
+    code_hash = sum(ord(c) for c in code)
+    base_total = 200 + (code_hash % 300)
+    base_rate = 65 + (code_hash % 20)
+
+    total = base_total
+    rate = base_rate
+    successful = int(total * rate / 100)
+    failed = total - successful
+    avg_wait = 25 + (code_hash % 35)
+
+    generic_data = {
+        "stationCode": code,
+        "totalTransfers": total,
+        "successfulTransfers": successful,
+        "failedTransfers": failed,
+        "successRate": rate,
+        "avgWaitingTime": avg_wait,
+        "topTrainPairs": [
+            {"trainPair": f"12{(code_hash % 9) + 1}01 → 12{(code_hash % 9) + 1}02", "count": 45 + (code_hash % 20)},
+            {"trainPair": f"12{(code_hash % 9) + 1}03 → 12{(code_hash % 9) + 1}04", "count": 38 + (code_hash % 15)},
+            {"trainPair": f"12{(code_hash % 9) + 1}05 → 12{(code_hash % 9) + 1}06", "count": 32 + (code_hash % 12)},
+            {"trainPair": f"12{(code_hash % 9) + 1}07 → 12{(code_hash % 9) + 1}08", "count": 27 + (code_hash % 10)},
+            {"trainPair": f"12{(code_hash % 9) + 1}09 → 12{(code_hash % 9) + 1}10", "count": 23 + (code_hash % 8)}
+        ]
+    }
+
+    return jsonify(generic_data)
+
+
 if __name__ == "__main__":
     # Load static data first
     print("Prayan Railway Route Server")
@@ -1227,6 +1435,10 @@ if __name__ == "__main__":
     print("  GET  /trains/search                 - Search trains")
     print("  GET  /trains/<number>               - Train info + schedule")
     print("  GET  /trains/<number>/live          - Live train tracking")
+    print("  GET  /admin/dashboard-metrics       - Dashboard metrics")
+    print("  GET  /admin/transfer-analytics      - Transfer analytics")
+    print("  GET  /admin/station-details/<code>  - Station details")
+    print("  POST /admin/optimize-timetable      - Timetable optimizer")
     print("  GET  /trains/<number>/history       - Train history")
     print("  GET  /fare                          - Fare lookup")
     print("  GET  /pnr/<pnr>                     - PNR status check")
