@@ -318,8 +318,7 @@ export function MultiRouteMap({
                   color: "#111111",
                 }}
               >
-                <span style={{ fontSize: "1.1rem" }}>⭐</span>
-                Best Recommended Route
+                Efficient Route
               </div>
             )}
 
