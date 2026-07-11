@@ -243,6 +243,7 @@ def get_route():
         from_station = data.get("from", "").upper()
         to_station = data.get("to", "").upper()
         date_str = data.get("date")  # "2026-07-13"
+        via_stations = data.get("viaStations", [])  # Optional list of via station codes
 
         if not from_station or not to_station or not date_str:
             return jsonify({"error": "Missing from, to, or date"}), 400
@@ -250,8 +251,28 @@ def get_route():
         # Parse date
         travel_date = datetime.strptime(date_str, "%Y-%m-%d")
 
-        # Find routes
-        routes = finder.find_routes(from_station, to_station, travel_date, max_routes=5)
+        # Normalize via stations to uppercase
+        via_stations = [v.upper() for v in via_stations if v]
+
+        # Validate via stations
+        if via_stations:
+            all_stations = [from_station] + via_stations + [to_station]
+            if len(all_stations) != len(set(all_stations)):
+                return jsonify({"error": "Duplicate stations in route (source, via, or destination)"}), 400
+
+            # Check if via station equals source or destination
+            if from_station in via_stations:
+                return jsonify({"error": "Via station cannot be the same as source"}), 400
+            if to_station in via_stations:
+                return jsonify({"error": "Via station cannot be the same as destination"}), 400
+
+        # Find routes (with or without via stations)
+        if via_stations:
+            routes = finder.find_routes_with_via_stations(
+                from_station, to_station, via_stations, travel_date, max_routes=5
+            )
+        else:
+            routes = finder.find_routes(from_station, to_station, travel_date, max_routes=5)
 
         if routes:
             route_response = {
@@ -259,6 +280,7 @@ def get_route():
                 "from": from_station,
                 "to": to_station,
                 "date": date_str,
+                "viaStations": via_stations if via_stations else None,
                 "routes": [
                     {
                         "rank": i + 1,
@@ -275,12 +297,14 @@ def get_route():
             }
             return jsonify(route_response)
         else:
+            via_msg = f" via {' → '.join(via_stations)}" if via_stations else ""
             return jsonify({
                 "status": "not_found",
                 "from": from_station,
                 "to": to_station,
                 "date": date_str,
-                "message": f"No route from {from_station} to {to_station} on {date_str}"
+                "viaStations": via_stations if via_stations else None,
+                "message": f"No route from {from_station}{via_msg} to {to_station} on {date_str}"
             }), 404
 
     except Exception as e:
