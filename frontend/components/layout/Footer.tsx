@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Train, Heart } from "lucide-react";
 
 export function Footer() {
   return (
@@ -25,34 +24,19 @@ export function Footer() {
         >
           {/* Brand */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div
+            <span
               style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
-                background:
-                  "linear-gradient(135deg, hsl(25,90%,55%), hsl(20,85%,45%))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 800,
+                fontSize: "1.4rem",
+                color: "#111111",
+                letterSpacing: "-0.04em",
               }}
             >
-              <Train size={16} color="white" />
-            </div>
-            <div>
-              <div
-                style={{
-                  fontFamily: "'Sora', sans-serif",
-                  fontWeight: 800,
-                  fontSize: "1rem",
-                  color: "#111111",
-                }}
-              >
-                Prayan
-              </div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                Intelligent Railway Journey Planner
-              </div>
+              Railfix.
+            </span>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+              Intelligent Railway Journey Planner
             </div>
           </div>
 
@@ -94,7 +78,7 @@ export function Footer() {
             }}
           >
             <span>Made with</span>
-            <Heart size={13} color="hsl(0,70%,60%)" fill="hsl(0,70%,60%)" />
+            <span style={{ color: "hsl(0,70%,60%)" }}>♥</span>
             <span>by</span>
             <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>
               Hawkins Crew
@@ -113,7 +97,7 @@ export function Footer() {
             textAlign: "center",
           }}
         >
-          Prayan uses a time-expanded graph engine to find optimal multi-train
+          railfix. uses a time-expanded graph engine to find optimal multi-train
           journeys. Data from Indian Railways public schedules. Not affiliated
           with Indian Railways or IRCTC.
         </div>

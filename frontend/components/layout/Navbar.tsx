@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Train, Menu, X, ChevronDown, Wrench, Shield, Users } from "lucide-react";
+import { Menu, X, Wrench, Shield } from "lucide-react";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -63,7 +63,7 @@ export function Navbar() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "12px",
+                gap: "8px",
                 background: "transparent",
                 border: "none",
                 cursor: "pointer",
@@ -71,48 +71,34 @@ export function Navbar() {
               }}
               aria-label={isAdminMode ? "Switch to Passenger Mode" : "Switch to Admin Mode"}
             >
-              <div
+              <span
                 style={{
-                  width: "38px",
-                  height: "38px",
-                  borderRadius: "10px",
-                  background: isAdminMode ? "hsl(25,90%,55%)" : "#111111",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
-                  transition: "all 0.3s ease",
+                  fontFamily: "'Inter', sans-serif",
+                  fontWeight: 800,
+                  fontSize: "1.6rem",
+                  color: "#111111",
+                  letterSpacing: "-0.04em",
+                  lineHeight: 1,
                 }}
               >
-                {isAdminMode ? <Shield size={20} color="white" /> : <Train size={20} color="white" />}
-              </div>
-              <div>
-                <div
-                  style={{
-                    fontFamily: "'Inter', sans-serif",
-                    fontWeight: 800,
-                    fontSize: "1.25rem",
-                    color: "#111111",
-                    letterSpacing: "-0.03em",
-                    lineHeight: 1,
-                  }}
-                >
-                  Prayan
-                </div>
-                <div
+                Railfix.
+              </span>
+              {isAdminMode && (
+                <span
                   style={{
                     fontSize: "0.68rem",
-                    color: isAdminMode ? "hsl(25,90%,55%)" : "#6B7280",
-                    fontWeight: 500,
-                    letterSpacing: "0.1em",
+                    color: "hsl(25,90%,55%)",
+                    fontWeight: 600,
+                    letterSpacing: "0.08em",
                     textTransform: "uppercase",
-                    marginTop: "2px",
-                    transition: "color 0.3s ease",
+                    background: "hsl(25,90%,95%)",
+                    padding: "2px 7px",
+                    borderRadius: "5px",
                   }}
                 >
-                  {isAdminMode ? "Admin" : "Railway"}
-                </div>
-              </div>
+                  Admin
+                </span>
+              )}
             </button>
 
             {/* Desktop nav - Only show in passenger mode */}

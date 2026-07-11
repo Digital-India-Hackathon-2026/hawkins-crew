@@ -5,19 +5,19 @@ import { Footer } from "@/components/layout/Footer";
 import { StationsProvider } from "@/contexts/StationsContext";
 
 export const metadata: Metadata = {
-  title: "Prayan — Intelligent Railway Journey Planner",
+  title: "railfix. — Intelligent Railway Journey Planner",
   description:
-    "Plan multi-train railway journeys across India's vast rail network. Find optimal routes, transfers, and timings with Prayan's intelligent journey planning engine.",
+    "Plan multi-train railway journeys across India's vast rail network. Find optimal routes, transfers, and timings with railfix.'s intelligent journey planning engine.",
   keywords: [
     "Indian Railways",
     "train journey planner",
     "multi-train routes",
     "railway booking",
     "IRCTC",
-    "Prayan",
+    "railfix.",
   ],
   openGraph: {
-    title: "Prayan — Intelligent Railway Journey Planner",
+    title: "railfix. — Intelligent Railway Journey Planner",
     description:
       "Discover optimal multi-train routes across Indian Railways with intelligent transfer recommendations.",
     type: "website",
