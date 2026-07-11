@@ -453,6 +453,17 @@ export interface OptimizerResult {
   after: OptimizerMetrics;
   recommendedChanges: RecommendedChange[];
   recommendations: Recommendation[];
+  optimizerMetadata?: {
+    status: string;
+    solveTimeMs: number;
+    objectiveScore: number;
+    constraintsActive: Record<string, boolean>;
+    trainsEvaluated: number;
+    transferPairsEvaluated: number;
+    successfulTransfersBefore: number;
+    successfulTransfersAfter: number;
+    solverStatus: string;
+  };
 }
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {

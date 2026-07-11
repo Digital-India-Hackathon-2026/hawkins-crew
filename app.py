@@ -14,7 +14,7 @@ import requests as http_requests
 
 from advanced_route_finder import AdvancedRouteFinder
 from mongodb import connect_to_mongodb, disconnect_from_mongodb
-from optimization import select_optimal_route, load_optimizer_config
+from optimization import select_optimal_route, load_optimizer_config, optimize_schedule, load_timetable_config
 
 
 app = Flask(__name__)
@@ -27,8 +27,9 @@ finder = None
 GRAPH_LOADING = False
 ERROR_MSG = None
 
-# Optimizer config - loaded once on startup
+# Optimizer configs - loaded once on startup
 OPTIMIZER_CONFIG = None
+TIMETABLE_CONFIG = None
 
 # In-memory data stores (loaded once on startup)
 STATIONS_LIST = []   # [{code, name, state, zone, lat, lng}]
@@ -142,17 +143,21 @@ def load_static_data():
 
 def load_graph():
     """Load graph and initialize route finder in background."""
-    global finder, GRAPH_LOADING, ERROR_MSG, OPTIMIZER_CONFIG
+    global finder, GRAPH_LOADING, ERROR_MSG, OPTIMIZER_CONFIG, TIMETABLE_CONFIG
 
     try:
         print("Loading graph...")
         finder = AdvancedRouteFinder("graph.pkl")
         print(f"Route finder initialized")
 
-        # Load optimizer config
+        # Load optimizer configs
         print("Loading optimizer config...")
         OPTIMIZER_CONFIG = load_optimizer_config("optimizer_config.json")
-        print(f"Optimizer config loaded")
+        print(f"Route optimizer config loaded")
+
+        print("Loading timetable optimizer config...")
+        TIMETABLE_CONFIG = load_timetable_config("timetable_config.json")
+        print(f"Timetable optimizer config loaded")
 
         GRAPH_LOADING = False
     except Exception as e:
@@ -939,6 +944,261 @@ def train_history(number: str):
     })
 
 
+# ─── Admin: Timetable Optimizer ──────────────────────────────────────────────
+
+@app.route("/admin/trains-at-station/<station_code>", methods=["GET"])
+def get_trains_at_station(station_code):
+    """
+    Get list of trains that stop at a given station (for debugging/testing).
+
+    Response: { "station": str, "trains": [{"number": str, "name": str}], "count": int }
+    """
+    trains_at_station = []
+
+    for train_num, schedule in SCHEDULES_MAP.items():
+        for stop in schedule:
+            if stop.get("station_code") == station_code:
+                train_info = TRAINS_MAP.get(train_num, {})
+                trains_at_station.append({
+                    "number": train_num,
+                    "name": train_info.get("name", train_num),
+                    "arrival": stop.get("arrival"),
+                    "departure": stop.get("departure")
+                })
+                break
+
+    return jsonify({
+        "station": station_code,
+        "trains": trains_at_station[:50],  # Limit to first 50
+        "count": len(trains_at_station)
+    })
+
+
+@app.route("/admin/optimize-timetable", methods=["POST"])
+def optimize_timetable():
+    """
+    Optimize train departure times at a junction station to maximize transfers.
+
+    Request body:
+    {
+        "stationCode": str,
+        "trainNumbers": [str],
+        "maxShiftMinutes": int (optional, default from config)
+    }
+
+    Response: OptimizerResult matching frontend interface
+    """
+    if TIMETABLE_CONFIG is None:
+        return jsonify({"error": "Timetable optimizer config not loaded"}), 500
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body required"}), 400
+
+    station_code = data.get("stationCode")
+    train_numbers = data.get("trainNumbers", [])
+    max_shift_minutes = data.get("maxShiftMinutes")
+
+    if not station_code:
+        return jsonify({"error": "stationCode is required"}), 400
+    if not train_numbers or len(train_numbers) == 0:
+        return jsonify({"error": "trainNumbers array is required"}), 400
+
+    print(f"[Optimizer] Station: {station_code}, Trains: {train_numbers}")
+
+    # Build train data from SCHEDULES_MAP
+    trains = []
+    trains_not_in_map = []
+    trains_no_stop = []
+
+    for train_num in train_numbers:
+        if train_num not in SCHEDULES_MAP:
+            trains_not_in_map.append(train_num)
+            continue
+
+        schedule = SCHEDULES_MAP[train_num]
+        train_info = TRAINS_MAP.get(train_num, {})
+
+        # Find the stop at junction station
+        junction_stop = None
+        for stop in schedule:
+            if stop.get("station_code") == station_code:
+                junction_stop = stop
+                break
+
+        if not junction_stop:
+            trains_no_stop.append(train_num)
+            continue  # Train doesn't stop at this station
+
+        trains.append({
+            "trainNumber": train_num,
+            "trainName": train_info.get("name", train_num),
+            "currentDeparture": junction_stop.get("departure", "00:00"),
+            "currentArrival": junction_stop.get("arrival", "00:00"),
+            "platform": None,  # Platform info not in data
+            "route": [s.get("station_code") for s in schedule],
+            "stopsAt": [
+                {
+                    "stationCode": s.get("station_code"),
+                    "arrivalTime": s.get("arrival"),
+                    "departureTime": s.get("departure")
+                }
+                for s in schedule
+            ]
+        })
+
+    if len(trains) == 0:
+        error_details = []
+        if trains_not_in_map:
+            error_details.append(f"Trains not found in schedules: {', '.join(trains_not_in_map)}")
+        if trains_no_stop:
+            error_details.append(f"Trains don't stop at {station_code}: {', '.join(trains_no_stop)}")
+
+        return jsonify({
+            "error": "insufficient_data",
+            "message": "None of the selected trains stop at this station or schedules not found.",
+            "details": " | ".join(error_details) if error_details else "Unknown reason"
+        }), 400
+
+    # Query MongoDB SearchLog for transfer pairs
+    # This is a simplified version - in production, query actual SearchLog collection
+    try:
+        from mongodb import get_database
+        db = get_database()
+
+        # Find searches with transfers at this station involving these trains
+        transfer_pairs_map = {}
+
+        searches = db.searchLogs.find({
+            "transfers": {
+                "$elemMatch": {
+                    "station": station_code
+                }
+            }
+        }).limit(1000)
+
+        for search in searches:
+            transfers = search.get("transfers", [])
+            for transfer in transfers:
+                if transfer.get("station") != station_code:
+                    continue
+
+                from_train = transfer.get("fromTrain", "")
+                to_train = transfer.get("toTrain", "")
+
+                if from_train in train_numbers and to_train in train_numbers:
+                    pair_key = f"{from_train}→{to_train}"
+                    if pair_key not in transfer_pairs_map:
+                        transfer_pairs_map[pair_key] = {
+                            "fromTrain": from_train,
+                            "toTrain": to_train,
+                            "passengerCount": 0
+                        }
+                    transfer_pairs_map[pair_key]["passengerCount"] += 1
+
+        transfer_pairs = list(transfer_pairs_map.values())
+
+        # If no transfer pairs found, generate synthetic ones for testing
+        if len(transfer_pairs) == 0:
+            print(f"[Optimizer] No SearchLog data found, generating synthetic transfer pairs")
+            for i, from_train in enumerate(train_numbers):
+                for to_train in train_numbers[i+1:]:
+                    transfer_pairs.append({
+                        "fromTrain": from_train,
+                        "toTrain": to_train,
+                        "passengerCount": 10  # Default
+                    })
+
+    except Exception as e:
+        print(f"[Optimizer] MongoDB query failed: {e}")
+        # Fallback: generate synthetic transfer pairs for all combinations
+        transfer_pairs = []
+        for i, from_train in enumerate(train_numbers):
+            for to_train in train_numbers[i+1:]:
+                transfer_pairs.append({
+                    "fromTrain": from_train,
+                    "toTrain": to_train,
+                    "passengerCount": 10  # Default
+                })
+
+    # Call timetable optimizer
+    try:
+        result, metadata = optimize_schedule(
+            trains,
+            transfer_pairs,
+            station_code,
+            TIMETABLE_CONFIG,
+            max_shift_minutes
+        )
+    except Exception as e:
+        return jsonify({"error": f"Optimization failed: {str(e)}"}), 500
+
+    # Compute before/after metrics
+    total_transfers = len(result["transferPairs"])
+    successful_before = sum(1 for tp in result["transferPairs"] if tp["successBefore"])
+    successful_after = sum(1 for tp in result["transferPairs"] if tp["successAfter"])
+    problematic_before = total_transfers - successful_before
+    problematic_after = total_transfers - successful_after
+
+    success_rate_before = int((successful_before / total_transfers * 100) if total_transfers > 0 else 0)
+    success_rate_after = int((successful_after / total_transfers * 100) if total_transfers > 0 else 0)
+
+    # Format recommended changes
+    recommended_changes = []
+    for train in result["trains"]:
+        if not train["changed"]:
+            continue
+
+        # Count impacted connections
+        impacted = sum(
+            1 for tp in result["transferPairs"]
+            if tp["fromTrain"] == train["trainNumber"] or tp["toTrain"] == train["trainNumber"]
+        )
+
+        # Compute improvement score (transfers made feasible)
+        improvement = sum(
+            1 for tp in result["transferPairs"]
+            if (tp["fromTrain"] == train["trainNumber"] or tp["toTrain"] == train["trainNumber"])
+            and tp["successAfter"] and not tp["successBefore"]
+        )
+
+        recommended_changes.append({
+            "trainNumber": train["trainNumber"],
+            "trainName": train["trainName"],
+            "currentDeparture": train["originalDeparture"],
+            "recommendedDeparture": train["optimizedDeparture"],
+            "shiftMinutes": train["shiftMinutes"],
+            "reason": f"Improves {improvement} transfer(s)" if improvement > 0 else "Maintains optimal timing",
+            "impactedConnections": impacted,
+            "improvementScore": improvement * 10,
+            "route": train["route"],
+            "stopsAt": train["stopsAt"]
+        })
+
+    # Build response
+    response = {
+        "stationCode": station_code,
+        "maxShiftMinutes": max_shift_minutes or TIMETABLE_CONFIG["maxShiftWindowMinutes"],
+        "before": {
+            "avgWaitingTime": 300,  # Placeholder - would compute from actual data
+            "successRate": success_rate_before,
+            "totalTransfers": total_transfers,
+            "problematicConnections": problematic_before
+        },
+        "after": {
+            "avgWaitingTime": 280,  # Placeholder
+            "successRate": success_rate_after,
+            "totalTransfers": total_transfers,
+            "problematicConnections": problematic_after
+        },
+        "recommendedChanges": recommended_changes,
+        "optimizerMetadata": metadata,
+        "recommendations": []  # Placeholder for compatibility
+    }
+
+    return jsonify(response)
+
+
 if __name__ == "__main__":
     # Load static data first
     print("Prayan Railway Route Server")
@@ -958,19 +1218,20 @@ if __name__ == "__main__":
 
     print("\nServer starting on http://localhost:5000")
     print("Endpoints:")
-    print("  POST /route                   - Find multi-train route")
-    print("  GET  /health                  - Health check")
-    print("  GET  /info                    - Graph info")
-    print("  GET  /stations                - Search stations")
-    print("  GET  /stations/all            - All stations (for frontend cache)")
-    print("  GET  /stations/<code>/board   - Station board")
-    print("  GET  /trains/search           - Search trains")
-    print("  GET  /trains/<number>         - Train info + schedule")
-    print("  GET  /trains/<number>/live    - Live train tracking")
-    print("  GET  /trains/<number>/history - Train history")
-    print("  GET  /fare                    - Fare lookup")
-    print("  GET  /pnr/<pnr>               - PNR status check")
-    print("  GET  /availability            - Seat availability")
+    print("  POST /route                         - Find multi-train route")
+    print("  GET  /health                        - Health check")
+    print("  GET  /info                          - Graph info")
+    print("  GET  /stations                      - Search stations")
+    print("  GET  /stations/all                  - All stations (for frontend cache)")
+    print("  GET  /stations/<code>/board         - Station board")
+    print("  GET  /trains/search                 - Search trains")
+    print("  GET  /trains/<number>               - Train info + schedule")
+    print("  GET  /trains/<number>/live          - Live train tracking")
+    print("  GET  /trains/<number>/history       - Train history")
+    print("  GET  /fare                          - Fare lookup")
+    print("  GET  /pnr/<pnr>                     - PNR status check")
+    print("  GET  /availability                  - Seat availability")
+    print("  POST /admin/optimize-timetable      - Optimize junction timetable")
     print("=" * 60)
 
     try:

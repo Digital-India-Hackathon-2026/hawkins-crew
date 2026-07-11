@@ -354,6 +354,111 @@ export default function TimetableOptimizerPage() {
               />
             </div>
 
+            {/* Optimizer Metadata Panel */}
+            {result.optimizerMetadata && (
+              <div
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--glass-border)",
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  marginBottom: "2rem",
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  Optimizer Details
+                </h3>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                    gap: "1rem",
+                  }}
+                >
+                  <MetadataItem
+                    label="Status"
+                    value={result.optimizerMetadata.status.toUpperCase()}
+                    color={
+                      result.optimizerMetadata.status === "optimal"
+                        ? "hsl(145,60%,45%)"
+                        : result.optimizerMetadata.status === "feasible"
+                        ? "hsl(40,95%,55%)"
+                        : result.optimizerMetadata.status === "infeasible"
+                        ? "hsl(0,70%,55%)"
+                        : result.optimizerMetadata.status === "no_improvement"
+                        ? "hsl(200,60%,50%)"
+                        : "var(--text-secondary)"
+                    }
+                  />
+                  <MetadataItem
+                    label="Solve Time"
+                    value={`${result.optimizerMetadata.solveTimeMs.toFixed(1)}ms`}
+                  />
+                  <MetadataItem
+                    label="Trains Evaluated"
+                    value={result.optimizerMetadata.trainsEvaluated}
+                  />
+                  <MetadataItem
+                    label="Transfer Pairs"
+                    value={result.optimizerMetadata.transferPairsEvaluated}
+                  />
+                  <MetadataItem
+                    label="Transfers Before"
+                    value={result.optimizerMetadata.successfulTransfersBefore}
+                  />
+                  <MetadataItem
+                    label="Transfers After"
+                    value={result.optimizerMetadata.successfulTransfersAfter}
+                    color={
+                      result.optimizerMetadata.successfulTransfersAfter >
+                      result.optimizerMetadata.successfulTransfersBefore
+                        ? "hsl(145,60%,45%)"
+                        : undefined
+                    }
+                  />
+                </div>
+                {result.optimizerMetadata.status === "infeasible" && (
+                  <div
+                    style={{
+                      marginTop: "1rem",
+                      padding: "1rem",
+                      background: "#FEF2F2",
+                      border: "1px solid #FECACA",
+                      borderRadius: "8px",
+                      color: "hsl(0,70%,45%)",
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    No improving schedule found within constraints. Try
+                    increasing max shift window or selecting different trains.
+                  </div>
+                )}
+                {result.optimizerMetadata.status === "no_improvement" && (
+                  <div
+                    style={{
+                      marginTop: "1rem",
+                      padding: "1rem",
+                      background: "#EFF6FF",
+                      border: "1px solid #BFDBFE",
+                      borderRadius: "8px",
+                      color: "hsl(200,70%,40%)",
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    Current timetable is already optimal for the selected
+                    constraints. No schedule changes recommended.
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Route Visualization Map */}
             <div
               style={{
@@ -369,7 +474,7 @@ export default function TimetableOptimizerPage() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  marginBottom: "1.5rem",
+                  marginBottom: "1rem",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -433,6 +538,55 @@ export default function TimetableOptimizerPage() {
                 </div>
               </div>
 
+              {/* Visual Comparison Summary */}
+              {result.recommendedChanges.length > 0 && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                    gap: "0.75rem",
+                    marginBottom: "1rem",
+                    padding: "1rem",
+                    background: mapMode === "after" ? "rgba(255,193,7,0.08)" : "rgba(120,120,120,0.05)",
+                    borderRadius: "10px",
+                    border: `1px solid ${mapMode === "after" ? "rgba(255,193,7,0.2)" : "var(--glass-border)"}`,
+                  }}
+                >
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "4px" }}>
+                      Viewing
+                    </div>
+                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                      {mapMode === "before" ? "Original Schedule" : "Optimized Schedule"}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "4px" }}>
+                      Routes Modified
+                    </div>
+                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "hsl(40,95%,55%)" }}>
+                      {result.recommendedChanges.filter(c => c.shiftMinutes > 0).length} / {result.recommendedChanges.length}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "4px" }}>
+                      Max Shift
+                    </div>
+                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                      {Math.max(...result.recommendedChanges.map(c => c.shiftMinutes))} min
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "4px" }}>
+                      Improvement
+                    </div>
+                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "hsl(145,60%,45%)" }}>
+                      +{result.after.successRate - result.before.successRate}%
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Legend */}
               <div
                 style={{
@@ -441,60 +595,93 @@ export default function TimetableOptimizerPage() {
                   gap: "1rem",
                   marginBottom: "1rem",
                   padding: "1rem",
-                  background: "var(--bg-secondary)",
+                  background: mapMode === "after" ? "rgba(255,193,7,0.08)" : "var(--bg-secondary)",
                   borderRadius: "10px",
                   fontSize: "0.85rem",
+                  border: `1px solid ${mapMode === "after" ? "rgba(255,193,7,0.2)" : "var(--glass-border)"}`,
+                  transition: "all 0.3s ease",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <div
-                    style={{
-                      width: "20px",
-                      height: "3px",
-                      background: "hsl(25,90%,55%)",
-                      borderRadius: "2px",
-                    }}
-                  />
-                  <span style={{ color: "var(--text-secondary)" }}>Train Route</span>
-                </div>
-                {mapMode === "after" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <div
-                      style={{
-                        width: "20px",
-                        height: "5px",
-                        background: "hsl(210,80%,60%)",
-                        borderRadius: "2px",
-                        border: "1px dashed rgba(60,130,220,0.5)",
-                      }}
-                    />
-                    <span style={{ color: "var(--text-secondary)" }}>Modified Schedule</span>
-                  </div>
+                {mapMode === "before" ? (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div
+                        style={{
+                          width: "24px",
+                          height: "3px",
+                          background: "hsl(25,90%,55%)",
+                          borderRadius: "2px",
+                          opacity: 0.65,
+                        }}
+                      />
+                      <span style={{ color: "var(--text-secondary)" }}>Original Schedule</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div
+                        style={{
+                          width: "12px",
+                          height: "20px",
+                          background: "hsl(210,100%,45%)",
+                          clipPath: "polygon(50% 0%, 100% 40%, 50% 100%, 0% 40%)",
+                        }}
+                      />
+                      <span style={{ color: "var(--text-secondary)" }}>Station</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div
+                        style={{
+                          width: "16px",
+                          height: "26px",
+                          background: "hsl(210,100%,45%)",
+                          clipPath: "polygon(50% 0%, 100% 40%, 50% 100%, 0% 40%)",
+                        }}
+                      />
+                      <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>
+                        Junction Station
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div
+                        style={{
+                          width: "24px",
+                          height: "6px",
+                          background: "hsl(40,95%,55%)",
+                          borderRadius: "2px",
+                          backgroundImage: "repeating-linear-gradient(90deg, hsl(40,95%,55%) 0px, hsl(40,95%,55%) 10px, transparent 10px, transparent 16px)",
+                        }}
+                      />
+                      <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>⚡ Optimized Route</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div
+                        style={{
+                          width: "24px",
+                          height: "3px",
+                          background: "hsl(25,90%,55%)",
+                          borderRadius: "2px",
+                          opacity: 0.65,
+                        }}
+                      />
+                      <span style={{ color: "var(--text-secondary)" }}>Unchanged Route</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div
+                        style={{
+                          width: "16px",
+                          height: "26px",
+                          background: "hsl(210,100%,45%)",
+                          clipPath: "polygon(50% 0%, 100% 40%, 50% 100%, 0% 40%)",
+                        }}
+                      />
+                      <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>
+                        Junction Station
+                      </span>
+                    </div>
+                  </>
                 )}
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <div
-                    style={{
-                      width: "12px",
-                      height: "20px",
-                      background: "hsl(210,100%,45%)",
-                      clipPath: "polygon(50% 0%, 100% 40%, 50% 100%, 0% 40%)",
-                    }}
-                  />
-                  <span style={{ color: "var(--text-secondary)" }}>Station</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <div
-                    style={{
-                      width: "16px",
-                      height: "26px",
-                      background: "hsl(210,100%,45%)",
-                      clipPath: "polygon(50% 0%, 100% 40%, 50% 100%, 0% 40%)",
-                    }}
-                  />
-                  <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>
-                    Junction Station
-                  </span>
-                </div>
               </div>
 
               <RouteMap
@@ -779,6 +966,40 @@ function MetricRow({ label, value }: { label: string; value: string | number }) 
       >
         {value}
       </span>
+    </div>
+  );
+}
+
+function MetadataItem({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string | number;
+  color?: string;
+}) {
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: "0.75rem",
+          color: "var(--text-muted)",
+          marginBottom: "4px",
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: "1.1rem",
+          fontWeight: 700,
+          color: color || "var(--text-primary)",
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }

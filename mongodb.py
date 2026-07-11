@@ -36,3 +36,13 @@ def disconnect_from_mongodb():
         client.close()
         client = None
         print("Disconnected from MongoDB")
+
+
+def get_database():
+    """Get the database instance (assumes connection is already established)."""
+    global client
+    if client is None:
+        raise Exception("MongoDB not connected. Call connect_to_mongodb() first.")
+
+    db_name = os.getenv("MONGODB_DB_NAME", "railconnect")
+    return client[db_name]
