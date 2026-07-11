@@ -25,8 +25,6 @@ const utilities = [
     color: "hsl(145,60%,45%)",
     bg: "rgba(50,180,100,0.1)",
     border: "rgba(50,180,100,0.2)",
-    badge: "Live",
-    badgeColor: "hsl(145,60%,50%)",
   },
   {
     id: "train",
@@ -37,8 +35,6 @@ const utilities = [
     color: "hsl(25,90%,60%)",
     bg: "rgba(220,100,30,0.1)",
     border: "rgba(220,100,30,0.2)",
-    badge: "Local Data",
-    badgeColor: "hsl(25,90%,60%)",
   },
   {
     id: "live",
@@ -49,8 +45,6 @@ const utilities = [
     color: "hsl(0,70%,60%)",
     bg: "rgba(220,50,50,0.1)",
     border: "rgba(220,50,50,0.2)",
-    badge: "Live",
-    badgeColor: "hsl(0,70%,60%)",
   },
   {
     id: "search",
@@ -61,8 +55,6 @@ const utilities = [
     color: "hsl(210,80%,60%)",
     bg: "rgba(60,130,220,0.1)",
     border: "rgba(60,130,220,0.2)",
-    badge: "Local Data",
-    badgeColor: "hsl(210,80%,60%)",
   },
   {
     id: "availability",
@@ -73,8 +65,6 @@ const utilities = [
     color: "hsl(270,70%,65%)",
     bg: "rgba(130,60,220,0.1)",
     border: "rgba(130,60,220,0.2)",
-    badge: "Estimated",
-    badgeColor: "hsl(270,70%,65%)",
   },
   {
     id: "station",
@@ -85,8 +75,6 @@ const utilities = [
     color: "hsl(185,70%,50%)",
     bg: "rgba(30,165,165,0.1)",
     border: "rgba(30,165,165,0.2)",
-    badge: "Local Data",
-    badgeColor: "hsl(185,70%,50%)",
   },
   {
     id: "fare",
@@ -97,8 +85,6 @@ const utilities = [
     color: "hsl(40,95%,55%)",
     bg: "rgba(255,170,50,0.1)",
     border: "rgba(255,170,50,0.2)",
-    badge: "Estimated",
-    badgeColor: "hsl(40,95%,55%)",
   },
   {
     id: "history",
@@ -109,8 +95,6 @@ const utilities = [
     color: "hsl(320,70%,60%)",
     bg: "rgba(200,50,150,0.1)",
     border: "rgba(200,50,150,0.2)",
-    badge: "Coming Soon",
-    badgeColor: "hsl(320,70%,60%)",
   },
 ];
 
@@ -224,12 +208,9 @@ export default function UtilitiesPage() {
                       el.style.boxShadow = "none";
                     }}
                   >
-                    {/* Icon + badge row */}
+                    {/* Icon row */}
                     <div
                       style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        justifyContent: "space-between",
                         marginBottom: "1rem",
                       }}
                     >
@@ -247,20 +228,6 @@ export default function UtilitiesPage() {
                       >
                         <Icon size={22} color={util.color} />
                       </div>
-                      <span
-                        style={{
-                          padding: "3px 10px",
-                          borderRadius: "100px",
-                          background: util.bg,
-                          border: `1px solid ${util.border}`,
-                          fontSize: "0.7rem",
-                          fontWeight: 600,
-                          color: util.badgeColor,
-                          letterSpacing: "0.03em",
-                        }}
-                      >
-                        {util.badge}
-                      </span>
                     </div>
 
                     {/* Title */}
