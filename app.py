@@ -23,7 +23,19 @@ from n8n_service import enrich_routes_with_delay_risk
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
 app.json.compact = False
-CORS(app)
+
+# ─── CORS ─────────────────────────────────────────────────────────────────────
+# In production set ALLOWED_ORIGINS to a comma-separated list of allowed origins.
+# Example: ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+# Leave unset (or set to "*") during local development for convenience.
+_raw_origins = os.environ.get("ALLOWED_ORIGINS", "*")
+_allowed_origins = (
+    [o.strip() for o in _raw_origins.split(",") if o.strip()]
+    if _raw_origins != "*"
+    else "*"
+)
+CORS(app, origins=_allowed_origins, supports_credentials=False)
+
 
 # Global route finder - loaded once on startup
 finder = None

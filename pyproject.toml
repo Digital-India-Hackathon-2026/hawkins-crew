@@ -11,4 +11,5 @@ dependencies = [
     "requests>=2.34.2",
     "pymongo>=4.17.0",
     "python-dotenv>=1.2.2",
+    "gunicorn>=23.0.0",
 ]
