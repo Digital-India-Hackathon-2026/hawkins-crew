@@ -4,6 +4,9 @@ Web server for railway routes with persistent in-memory graph.
 Graph loads once on startup, stays in memory for fast queries.
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
@@ -14,6 +17,7 @@ import requests as http_requests
 
 from advanced_route_finder import AdvancedRouteFinder
 from mongodb import connect_to_mongodb, disconnect_from_mongodb
+from n8n_service import enrich_routes_with_delay_risk
 
 
 app = Flask(__name__)
@@ -30,6 +34,26 @@ ERROR_MSG = None
 STATIONS_LIST = []   # [{code, name, state, zone, lat, lng}]
 TRAINS_MAP = {}      # {number -> train_info}
 SCHEDULES_MAP = {}   # {train_number -> [stops]}
+
+
+def format_score_breakdown(breakdown: dict) -> dict:
+    """Convert score breakdown from seconds to user-friendly format."""
+    formatted = {}
+    for key, value in breakdown.items():
+        if key == 'travel_time':
+            hours = int(value // 3600)
+            mins = int((value % 3600) // 60)
+            formatted['Time on Trains'] = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
+        elif key == 'waiting_time':
+            hours = int(value // 3600)
+            mins = int((value % 3600) // 60)
+            formatted['Waiting at Stations'] = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
+        elif key == 'transfer_penalty':
+            transfers = int(value / 3600) if value > 0 else 0
+            formatted['Transfer Changes'] = f"{transfers} changes"
+        elif key == 'centrality_bonus':
+            formatted['Route Directness'] = "Direct" if value == 0 else f"{value:.0f} penalty"
+    return formatted
 
 
 def load_static_data():
@@ -197,7 +221,7 @@ def info():
 
 @app.route("/route", methods=["POST"])
 def get_route():
-    """Find route between stations."""
+    """Find route between stations. Returns routes immediately without delay risk."""
 
     if finder is None:
         return jsonify({"error": "Graph not ready"}), 503
@@ -218,7 +242,7 @@ def get_route():
         routes = finder.find_routes(from_station, to_station, travel_date, max_routes=5)
 
         if routes:
-            return jsonify({
+            route_response = {
                 "status": "found",
                 "from": from_station,
                 "to": to_station,
@@ -232,11 +256,12 @@ def get_route():
                         "num_transfers": route.num_transfers,
                         "trains_used": route.trains_used,
                         "score": route.score,
-                        "score_breakdown": route.score_breakdown
+                        "score_breakdown": format_score_breakdown(route.score_breakdown)
                     }
                     for i, route in enumerate(routes)
                 ]
-            })
+            }
+            return jsonify(route_response)
         else:
             return jsonify({
                 "status": "not_found",
@@ -248,6 +273,57 @@ def get_route():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+@app.route("/delay-risk", methods=["POST"])
+def get_delay_risk():
+    """
+    Fetch AI-powered delay risk for a single route via n8n.
+    Called lazily by the frontend after routes are already displayed.
+
+    Request body:
+        {
+            "from": "SRC",
+            "to": "HWH",
+            "date": "2026-07-15",
+            "route": { ...single route object... }
+        }
+
+    Response:
+        { "riskScore": 67, "description": "...", "recommendation": "...", "available": true }
+    """
+    try:
+        body = request.json or {}
+        route = body.get("route")
+        if not route:
+            return jsonify({"error": "Missing route in request body"}), 400
+
+        route_response = {
+            "from": body.get("from", ""),
+            "to": body.get("to", ""),
+            "date": body.get("date", ""),
+            "status": "found",
+            "routes": [route],
+        }
+
+        from n8n_service import enrich_routes_with_delay_risk
+        enriched = enrich_routes_with_delay_risk(route_response)
+        risk = enriched["routes"][0].get("delayRisk", {
+            "riskScore": None,
+            "description": "Delay analysis unavailable.",
+            "recommendation": "Check live train status before departure.",
+            "available": False,
+        })
+        return jsonify(risk)
+
+    except Exception as e:
+        print(f"[delay-risk] Error: {e}")
+        return jsonify({
+            "riskScore": None,
+            "description": "Delay analysis unavailable.",
+            "recommendation": "Check live train status before departure.",
+            "available": False,
+        })
 
 
 # ─── Stations ─────────────────────────────────────────────────────────────────
@@ -928,6 +1004,7 @@ if __name__ == "__main__":
     print("\nServer starting on http://localhost:5000")
     print("Endpoints:")
     print("  POST /route                   - Find multi-train route")
+    print("  POST /delay-risk              - AI delay risk (lazy, per route)")
     print("  GET  /health                  - Health check")
     print("  GET  /info                    - Graph info")
     print("  GET  /stations                - Search stations")

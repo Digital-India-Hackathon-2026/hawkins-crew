@@ -27,6 +27,7 @@ export default function HomePage() {
     setIsLoading(true);
     setError(null);
     setSearched(false);
+    setRoutes([]);
 
     try {
       const result = await findRoutes(from, to, date);
@@ -446,6 +447,7 @@ export default function HomePage() {
                           route={route}
                           fromStation={lastSearch?.from || ""}
                           toStation={lastSearch?.to || ""}
+                          date={lastSearch?.date || ""}
                         />
                       </div>
                     ))}
